@@ -167,4 +167,31 @@ export const DOOTY_THEME_COLORS = {
     muted: '#6A6152',
     white: '#FFFFFF',
 };
+export const MOOD_OPTIONS = [
+    { id: 'Zoomy', name: 'Zoomy', nameKo: '우다다' },
+    { id: 'Regal', name: 'Regal', nameKo: '도도함' },
+    { id: 'Guilty', name: 'Guilty', nameKo: '눈치봄' },
+    { id: 'Unbothered', name: 'Unbothered', nameKo: '무덤덤' },
+    { id: 'Feral', name: 'Feral', nameKo: '천방지축' },
+    { id: 'Happy', name: 'Happy', nameKo: '행복함' },
+    { id: 'Calm', name: 'Calm', nameKo: '차분함' },
+];
+export const MOOD_MAP_KO = {
+    Zoomy: '우다다',
+    Regal: '도도함',
+    Guilty: '눈치봄',
+    Unbothered: '무덤덤',
+    Feral: '천방지축',
+    Happy: '행복함',
+    Calm: '차분함',
+};
+export const MOOD_MAP_EN = {
+    우다다: 'Zoomy',
+    도도함: 'Regal',
+    눈치봄: 'Guilty',
+    무덤덤: 'Unbothered',
+    천방지축: 'Feral',
+    행복함: 'Happy',
+    차분함: 'Calm',
+};
 //# sourceMappingURL=index.js.map

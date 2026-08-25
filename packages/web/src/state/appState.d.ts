@@ -27,6 +27,7 @@ declare class AppStateManager {
     pendingInvites: PendingInviteItem[];
     loggerModalOpen: boolean;
     loggerEventType: EventType | null;
+    editingEvent: PetEvent | null;
     photoModalOpen: boolean;
     photoModalTarget: 'pet' | 'user' | 'member';
     photoModalTargetId: string;
@@ -44,6 +45,7 @@ declare class AppStateManager {
     setNudgePreference(key: string, value: boolean): void;
     setAnalyticsTimeRange(range: TimeRangeFilter): void;
     openLogger(eventType?: EventType | null): void;
+    openLoggerForEdit(event: PetEvent): void;
     closeLogger(): void;
     openPhotoModal(opts: {
         target: 'pet' | 'user' | 'member';
@@ -65,6 +67,8 @@ declare class AppStateManager {
     refreshEvents(): Promise<void>;
     syncEvents(): Promise<void>;
     logEvent(eventType: EventType, notes?: string, metadata?: Record<string, any>, lat?: number, lng?: number): Promise<void>;
+    updateEvent(eventId: string, eventType: EventType, notes?: string, metadata?: Record<string, any>, lat?: number, lng?: number, timestamp?: string): Promise<void>;
+    deleteEvent(eventId: string): Promise<void>;
     handleNetworkChange(isOnline: boolean): Promise<void>;
     get isAuthenticated(): boolean;
     signOut(): void;

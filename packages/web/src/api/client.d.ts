@@ -1,4 +1,4 @@
-import { Household, Pet, PetEvent, CreateEventDTO, CreateHouseholdDTO, PetAnalytics, DogNotesImportItem, WalkRoute, SignUpDTO, SignInDTO, AuthSessionResponse, GetEventsQuery } from '@watslog/shared';
+import { Household, Pet, PetEvent, CreateEventDTO, UpdateEventDTO, CreateHouseholdDTO, PetAnalytics, DogNotesImportItem, WalkRoute, SignUpDTO, SignInDTO, AuthSessionResponse, GetEventsQuery } from '@watslog/shared';
 export declare class ApiClient {
     static signUp(dto: SignUpDTO): Promise<AuthSessionResponse>;
     static signIn(dto: SignInDTO): Promise<AuthSessionResponse>;
@@ -24,6 +24,8 @@ export declare class ApiClient {
     static syncEvents(petId: string, onProgress?: (count: number) => void): Promise<PetEvent[]>;
     static backfillOlderEvents(petId: string, beforeIso: string, onProgress?: (count: number) => void): Promise<void>;
     static createEvent(dto: CreateEventDTO): Promise<PetEvent>;
+    static updateEvent(eventId: string, updates: UpdateEventDTO): Promise<PetEvent>;
+    static deleteEvent(eventId: string): Promise<void>;
     static flushOfflineQueue(): Promise<number>;
     static importEvents(events: Omit<PetEvent, 'id' | 'createdAt'>[]): Promise<{
         importedCount: number;

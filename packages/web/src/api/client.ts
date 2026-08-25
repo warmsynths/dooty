@@ -3,6 +3,7 @@ import {
   Pet,
   PetEvent,
   CreateEventDTO,
+  UpdateEventDTO,
   CreateHouseholdDTO,
   PetAnalytics,
   DogNotesImportItem,
@@ -18,6 +19,8 @@ import {
   removePendingEvent,
   saveEventsOffline,
   getEventsOffline,
+  deleteEventOffline,
+  updateEventOffline,
   getLastSyncTimestamp,
   setLastSyncTimestamp,
 } from '../db/offlineStore.js';
@@ -354,6 +357,59 @@ export class ApiClient {
         isOfflinePending: true,
         localId,
       };
+    }
+  }
+
+  static async updateEvent(eventId: string, updates: UpdateEventDTO): Promise<PetEvent> {
+    if (!navigator.onLine) {
+      // Find event offline and apply updates
+      const all = await getEventsOffline(''); // or update directly
+      const target = all.find((e) => e.id === eventId);
+      if (target) {
+        const updated: PetEvent = {
+          ...target,
+          ...updates,
+          eventType: updates.eventType ?? target.eventType,
+          notes: updates.notes !== undefined ? updates.notes : target.notes,
+          latitude: updates.latitude !== undefined ? (updates.latitude ?? undefined) : target.latitude,
+          longitude: updates.longitude !== undefined ? (updates.longitude ?? undefined) : target.longitude,
+          metadata: updates.metadata !== undefined ? updates.metadata : target.metadata,
+        };
+        await updateEventOffline(updated);
+        return updated;
+      }
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/events/${eventId}`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error('Server returned error updating event');
+      const evt: PetEvent = await res.json();
+      await updateEventOffline(evt);
+      return evt;
+    } catch (err) {
+      console.warn('Network update failed:', err);
+      throw err;
+    }
+  }
+
+  static async deleteEvent(eventId: string): Promise<void> {
+    await deleteEventOffline(eventId);
+    if (!navigator.onLine) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/events/${eventId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok && res.status !== 404) {
+        throw new Error('Server returned error deleting event');
+      }
+    } catch (err) {
+      console.warn('Network delete warning:', err);
     }
   }
 

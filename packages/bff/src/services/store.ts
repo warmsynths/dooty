@@ -4,6 +4,7 @@ import {
   Pet,
   PetEvent,
   CreateEventDTO,
+  UpdateEventDTO,
   CreateHouseholdDTO,
   WalkRoute,
   calculatePetAnalytics,
@@ -1222,6 +1223,128 @@ export class DataService {
     };
     memEvents.unshift(event);
     return event;
+  }
+
+  async getEvent(eventId: string): Promise<PetEvent | null> {
+    const supabase = getSupabaseClient(this.env);
+    if (supabase && isUuid(eventId)) {
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', eventId)
+          .single();
+        if (!error && data) {
+          return {
+            id: data.id,
+            householdId: data.household_id,
+            petId: data.pet_id,
+            eventType: data.event_type,
+            loggedByName: data.logged_by_name,
+            loggedByUserId: data.logged_by_user_id,
+            timestamp: data.timestamp,
+            notes: data.notes,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            metadata: data.metadata,
+            createdAt: data.created_at,
+          };
+        }
+      } catch (err) {
+        console.warn('Supabase getEvent error:', err);
+      }
+    }
+    return memEvents.find((e) => e.id === eventId) || null;
+  }
+
+  async updateEvent(eventId: string, updates: UpdateEventDTO): Promise<PetEvent | null> {
+    const supabase = getSupabaseClient(this.env);
+    if (supabase && isUuid(eventId)) {
+      try {
+        const updatePayload: Record<string, any> = {};
+        if (updates.eventType !== undefined) updatePayload.event_type = updates.eventType;
+        if (updates.loggedByName !== undefined) updatePayload.logged_by_name = updates.loggedByName;
+        if (updates.loggedByUserId !== undefined) updatePayload.logged_by_user_id = updates.loggedByUserId;
+        if (updates.timestamp !== undefined) updatePayload.timestamp = updates.timestamp;
+        if (updates.notes !== undefined) updatePayload.notes = updates.notes;
+        if (updates.latitude !== undefined) updatePayload.latitude = updates.latitude;
+        if (updates.longitude !== undefined) updatePayload.longitude = updates.longitude;
+        if (updates.metadata !== undefined) updatePayload.metadata = updates.metadata;
+
+        const { data, error } = await supabase
+          .from('events')
+          .update(updatePayload)
+          .eq('id', eventId)
+          .select()
+          .single();
+
+        if (!error && data) {
+          const updatedEvt: PetEvent = {
+            id: data.id,
+            householdId: data.household_id,
+            petId: data.pet_id,
+            eventType: data.event_type,
+            loggedByName: data.logged_by_name,
+            loggedByUserId: data.logged_by_user_id,
+            timestamp: data.timestamp,
+            notes: data.notes,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            metadata: data.metadata,
+            createdAt: data.created_at,
+          };
+          const memIdx = memEvents.findIndex((e) => e.id === eventId);
+          if (memIdx !== -1) {
+            memEvents[memIdx] = updatedEvt;
+          }
+          return updatedEvt;
+        }
+      } catch (err) {
+        console.warn('Supabase updateEvent error:', err);
+      }
+    }
+
+    const memIdx = memEvents.findIndex((e) => e.id === eventId);
+    if (memIdx !== -1) {
+      const existing = memEvents[memIdx];
+      const updated: PetEvent = {
+        ...existing,
+        ...updates,
+        eventType: updates.eventType ?? existing.eventType,
+        notes: updates.notes !== undefined ? updates.notes : existing.notes,
+        latitude: updates.latitude !== undefined ? (updates.latitude ?? undefined) : existing.latitude,
+        longitude: updates.longitude !== undefined ? (updates.longitude ?? undefined) : existing.longitude,
+        metadata: updates.metadata !== undefined ? updates.metadata : existing.metadata,
+      };
+      memEvents[memIdx] = updated;
+      return updated;
+    }
+    return null;
+  }
+
+  async deleteEvent(eventId: string): Promise<boolean> {
+    const supabase = getSupabaseClient(this.env);
+    if (supabase && isUuid(eventId)) {
+      try {
+        const { error } = await supabase.from('events').delete().eq('id', eventId);
+        if (!error) {
+          const memIdx = memEvents.findIndex((e) => e.id === eventId);
+          if (memIdx !== -1) {
+            memEvents.splice(memIdx, 1);
+          }
+          return true;
+        }
+      } catch (err) {
+        console.warn('Supabase deleteEvent error:', err);
+      }
+    }
+
+    const memIdx = memEvents.findIndex((e) => e.id === eventId);
+    if (memIdx !== -1) {
+      memEvents.splice(memIdx, 1);
+      return true;
+    }
+    return true;
   }
 
   async batchSyncEvents(events: CreateEventDTO[]): Promise<PetEvent[]> {

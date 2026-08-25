@@ -300,4 +300,5 @@ export interface TranslationSchema {
     };
 }
 export declare const translations: Record<SupportedLocale, TranslationSchema>;
+export declare function formatLocalizedEventNotes(notes: string | undefined, eventType: EventType, isKo: boolean): string;
 //# sourceMappingURL=index.d.ts.map

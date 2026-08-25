@@ -11,6 +11,7 @@ import {
   AuthSessionResponse,
   HouseholdInvite,
   TimeRangeFilter,
+  UpdateEventDTO,
 } from '@watslog/shared';
 import { ApiClient } from '../api/client.js';
 import { getPendingEvents, getEventsOffline } from '../db/offlineStore.js';
@@ -72,6 +73,7 @@ class AppStateManager {
   // Modal states
   loggerModalOpen: boolean = false;
   loggerEventType: EventType | null = null;
+  editingEvent: PetEvent | null = null;
   photoModalOpen: boolean = false;
   photoModalTarget: 'pet' | 'user' | 'member' = 'pet';
   photoModalTargetId: string = '';
@@ -192,7 +194,15 @@ class AppStateManager {
   }
 
   openLogger(eventType?: EventType | null) {
+    this.editingEvent = null;
     this.loggerEventType = eventType || null;
+    this.loggerModalOpen = true;
+    this.notify();
+  }
+
+  openLoggerForEdit(event: PetEvent) {
+    this.editingEvent = event;
+    this.loggerEventType = event.eventType;
     this.loggerModalOpen = true;
     this.notify();
   }
@@ -200,6 +210,7 @@ class AppStateManager {
   closeLogger() {
     this.loggerModalOpen = false;
     this.loggerEventType = null;
+    this.editingEvent = null;
     this.notify();
   }
 
@@ -528,6 +539,58 @@ class AppStateManager {
 
     this.events = [newEvt, ...this.events];
     await this.checkPendingSync();
+    this.notify();
+  }
+
+  async updateEvent(
+    eventId: string,
+    eventType: EventType,
+    notes = '',
+    metadata?: Record<string, any>,
+    lat?: number,
+    lng?: number,
+    timestamp?: string
+  ) {
+    const updates: UpdateEventDTO = {
+      eventType,
+      notes,
+      metadata: metadata || {},
+      latitude: lat,
+      longitude: lng,
+    };
+    if (timestamp) {
+      updates.timestamp = timestamp;
+    }
+
+    try {
+      const updatedEvt = await ApiClient.updateEvent(eventId, updates);
+      this.events = this.events.map((e) => (e.id === eventId ? { ...e, ...updatedEvt } : e));
+    } catch (err) {
+      // Optimistic local update fallback
+      this.events = this.events.map((e) =>
+        e.id === eventId
+          ? {
+              ...e,
+              eventType,
+              notes,
+              metadata: metadata || e.metadata,
+              latitude: lat !== undefined ? lat : e.latitude,
+              longitude: lng !== undefined ? lng : e.longitude,
+              ...(timestamp ? { timestamp } : {}),
+            }
+          : e
+      );
+    }
+    this.notify();
+  }
+
+  async deleteEvent(eventId: string) {
+    try {
+      await ApiClient.deleteEvent(eventId);
+    } catch (err) {
+      console.warn('Failed to delete event on backend:', err);
+    }
+    this.events = this.events.filter((e) => e.id !== eventId && e.localId !== eventId);
     this.notify();
   }
 

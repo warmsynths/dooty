@@ -1,7 +1,12 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
-import { calculatePetAnalytics, predictNextPoop, PetEvent } from '@watslog/shared';
+import {
+  calculatePetAnalytics,
+  predictNextPoop,
+  PetEvent,
+  formatLocalizedEventNotes,
+} from '@watslog/shared';
 
 @customElement('dooty-home')
 export class DootyHome extends LitElement {
@@ -261,6 +266,19 @@ export class DootyHome extends LitElement {
       border-radius: 20px;
       padding: 12px 14px;
       box-shadow: 3px 3px 0 #17140F;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    .feed-card:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 #17140F;
+    }
+
+    .feed-card:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #17140F;
     }
 
     .feed-badge {
@@ -566,11 +584,11 @@ export class DootyHome extends LitElement {
               const { tag, bg } = this.getEventVisuals(evt.eventType);
 
               return html`
-                <div class="feed-card" @click=${() => appState.openLogger(evt.eventType)}>
+                <div class="feed-card" @click=${() => appState.openLoggerForEdit(evt)}>
                   <div class="feed-badge" style="background: ${bg};">${tag}</div>
                   <div class="feed-content">
                     <div class="feed-title">
-                      ${evt.notes || `${evt.eventType.toUpperCase()} · ${isKo ? '기록됨' : 'Logged'}`}
+                      ${formatLocalizedEventNotes(evt.notes, evt.eventType, isKo)}
                     </div>
                     <div class="feed-detail">
                       ${isKo ? `기록자: ${evt.loggedByName}` : `logged by ${evt.loggedByName}`}
@@ -590,11 +608,11 @@ export class DootyHome extends LitElement {
                 const { tag, bg } = this.getEventVisuals(evt.eventType);
 
                 return html`
-                  <div class="feed-card" @click=${() => appState.openLogger(evt.eventType)}>
+                  <div class="feed-card" @click=${() => appState.openLoggerForEdit(evt)}>
                     <div class="feed-badge" style="background: ${bg};">${tag}</div>
                     <div class="feed-content">
                       <div class="feed-title">
-                        ${evt.notes || `${evt.eventType.toUpperCase()} · ${isKo ? '기록' : 'Logged'}`}
+                        ${formatLocalizedEventNotes(evt.notes, evt.eventType, isKo)}
                       </div>
                       <div class="feed-detail">
                         ${new Date(evt.timestamp).toLocaleDateString()} · ${evt.loggedByName}

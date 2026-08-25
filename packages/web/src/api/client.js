@@ -1,4 +1,4 @@
-import { enqueuePendingEvent, getPendingEvents, removePendingEvent, saveEventsOffline, getEventsOffline, getLastSyncTimestamp, setLastSyncTimestamp, } from '../db/offlineStore.js';
+import { enqueuePendingEvent, getPendingEvents, removePendingEvent, saveEventsOffline, getEventsOffline, deleteEventOffline, updateEventOffline, getLastSyncTimestamp, setLastSyncTimestamp, } from '../db/offlineStore.js';
 const DEFAULT_BFF_URL = 'https://watslog-bff.warmsynthsiloveyou.workers.dev/api';
 function getApiBase() {
     const envUrl = import.meta.env?.VITE_API_URL;
@@ -311,6 +311,59 @@ export class ApiClient {
                 isOfflinePending: true,
                 localId,
             };
+        }
+    }
+    static async updateEvent(eventId, updates) {
+        if (!navigator.onLine) {
+            // Find event offline and apply updates
+            const all = await getEventsOffline(''); // or update directly
+            const target = all.find((e) => e.id === eventId);
+            if (target) {
+                const updated = {
+                    ...target,
+                    ...updates,
+                    eventType: updates.eventType ?? target.eventType,
+                    notes: updates.notes !== undefined ? updates.notes : target.notes,
+                    latitude: updates.latitude !== undefined ? (updates.latitude ?? undefined) : target.latitude,
+                    longitude: updates.longitude !== undefined ? (updates.longitude ?? undefined) : target.longitude,
+                    metadata: updates.metadata !== undefined ? updates.metadata : target.metadata,
+                };
+                await updateEventOffline(updated);
+                return updated;
+            }
+        }
+        try {
+            const res = await fetch(`${API_BASE}/events/${eventId}`, {
+                method: 'PATCH',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(updates),
+            });
+            if (!res.ok)
+                throw new Error('Server returned error updating event');
+            const evt = await res.json();
+            await updateEventOffline(evt);
+            return evt;
+        }
+        catch (err) {
+            console.warn('Network update failed:', err);
+            throw err;
+        }
+    }
+    static async deleteEvent(eventId) {
+        await deleteEventOffline(eventId);
+        if (!navigator.onLine)
+            return;
+        try {
+            const res = await fetch(`${API_BASE}/events/${eventId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+            });
+            if (!res.ok && res.status !== 404) {
+                throw new Error('Server returned error deleting event');
+            }
+        }
+        catch (err) {
+            console.warn('Network delete warning:', err);
         }
     }
     static async flushOfflineQueue() {

@@ -42,6 +42,7 @@ class AppStateManager {
         // Modal states
         this.loggerModalOpen = false;
         this.loggerEventType = null;
+        this.editingEvent = null;
         this.photoModalOpen = false;
         this.photoModalTarget = 'pet';
         this.photoModalTargetId = '';
@@ -149,13 +150,21 @@ class AppStateManager {
         this.notify();
     }
     openLogger(eventType) {
+        this.editingEvent = null;
         this.loggerEventType = eventType || null;
+        this.loggerModalOpen = true;
+        this.notify();
+    }
+    openLoggerForEdit(event) {
+        this.editingEvent = event;
+        this.loggerEventType = event.eventType;
         this.loggerModalOpen = true;
         this.notify();
     }
     closeLogger() {
         this.loggerModalOpen = false;
         this.loggerEventType = null;
+        this.editingEvent = null;
         this.notify();
     }
     openPhotoModal(opts) {
@@ -467,6 +476,47 @@ class AppStateManager {
         });
         this.events = [newEvt, ...this.events];
         await this.checkPendingSync();
+        this.notify();
+    }
+    async updateEvent(eventId, eventType, notes = '', metadata, lat, lng, timestamp) {
+        const updates = {
+            eventType,
+            notes,
+            metadata: metadata || {},
+            latitude: lat,
+            longitude: lng,
+        };
+        if (timestamp) {
+            updates.timestamp = timestamp;
+        }
+        try {
+            const updatedEvt = await ApiClient.updateEvent(eventId, updates);
+            this.events = this.events.map((e) => (e.id === eventId ? { ...e, ...updatedEvt } : e));
+        }
+        catch (err) {
+            // Optimistic local update fallback
+            this.events = this.events.map((e) => e.id === eventId
+                ? {
+                    ...e,
+                    eventType,
+                    notes,
+                    metadata: metadata || e.metadata,
+                    latitude: lat !== undefined ? lat : e.latitude,
+                    longitude: lng !== undefined ? lng : e.longitude,
+                    ...(timestamp ? { timestamp } : {}),
+                }
+                : e);
+        }
+        this.notify();
+    }
+    async deleteEvent(eventId) {
+        try {
+            await ApiClient.deleteEvent(eventId);
+        }
+        catch (err) {
+            console.warn('Failed to delete event on backend:', err);
+        }
+        this.events = this.events.filter((e) => e.id !== eventId && e.localId !== eventId);
         this.notify();
     }
     async handleNetworkChange(isOnline) {

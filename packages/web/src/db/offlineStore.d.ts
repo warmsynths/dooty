@@ -38,5 +38,7 @@ export declare function getPendingEvents(): Promise<{
     dto: CreateEventDTO;
 }[]>;
 export declare function removePendingEvent(localId: string): Promise<void>;
+export declare function deleteEventOffline(eventId: string): Promise<void>;
+export declare function updateEventOffline(event: PetEvent): Promise<void>;
 export {};
 //# sourceMappingURL=offlineStore.d.ts.map

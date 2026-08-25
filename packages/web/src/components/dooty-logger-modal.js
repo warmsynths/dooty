@@ -188,7 +188,12 @@ let DootyLoggerModal = class DootyLoggerModal extends LitElement {
         this.isSaving = true;
         try {
             const type = appState.loggerEventType || 'poop';
-            await appState.logEvent(type, this.notes, undefined, this.lat, this.lng);
+            if (appState.editingEvent) {
+                await appState.updateEvent(appState.editingEvent.id, type, this.notes, appState.editingEvent.metadata, this.lat, this.lng, appState.editingEvent.timestamp);
+            }
+            else {
+                await appState.logEvent(type, this.notes, undefined, this.lat, this.lng);
+            }
             appState.closeLogger();
         }
         finally {

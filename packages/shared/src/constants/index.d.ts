@@ -22,4 +22,12 @@ export declare const DOOTY_THEME_COLORS: {
     muted: string;
     white: string;
 };
+export interface MoodOption {
+    id: string;
+    name: string;
+    nameKo: string;
+}
+export declare const MOOD_OPTIONS: MoodOption[];
+export declare const MOOD_MAP_KO: Record<string, string>;
+export declare const MOOD_MAP_EN: Record<string, string>;
 //# sourceMappingURL=index.d.ts.map

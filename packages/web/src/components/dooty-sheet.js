@@ -7,6 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
+import { MOOD_OPTIONS, MOOD_MAP_KO } from '@watslog/shared';
 let DootySheet = class DootySheet extends LitElement {
     constructor() {
         super(...arguments);
@@ -25,8 +26,13 @@ let DootySheet = class DootySheet extends LitElement {
         this.portion = '1 cup';
         this.photoUrl = '';
         this.notes = '';
-        this.locationName = 'Elm St & 4th';
-        this.weatherText = '18° drizzle';
+        this.locationName = '';
+        this.lat = undefined;
+        this.lng = undefined;
+        this.isLocating = false;
+        this.showLocationPicker = false;
+        this.weatherText = '';
+        this.isFetchingWeather = false;
         this.wasOpen = false;
         this.consNames = [
             'hard pellets',
@@ -62,37 +68,53 @@ let DootySheet = class DootySheet extends LitElement {
             { name: 'Flea & tick', dose: 'topical, weekly' },
         ];
         this.walkOptions = [
-            { min: '15 min', km: '1.1 km' },
-            { min: '30 min', km: '2.3 km' },
-            { min: '45 min', km: '3.4 km' },
-            { min: '1 hr', km: '4.6 km' },
+            { min: '15 min', minKo: '15분', km: '1.1 km' },
+            { min: '30 min', minKo: '30분', km: '2.3 km' },
+            { min: '45 min', minKo: '45분', km: '3.4 km' },
+            { min: '1 hr', minKo: '1시간', km: '4.6 km' },
         ];
         this.vetReasons = [
-            'Annual check-up',
-            'Vaccination booster',
-            'Loose stool consult',
-            'Dental scaling',
-            'Medication renewal',
-            'Follow-up exam',
+            { id: 'Annual check-up', name: 'Annual check-up', nameKo: '정기 검진' },
+            { id: 'Vaccination booster', name: 'Vaccination booster', nameKo: '예방 접종' },
+            { id: 'Loose stool consult', name: 'Loose stool consult', nameKo: '배변/설사 진료' },
+            { id: 'Dental scaling', name: 'Dental scaling', nameKo: '치과/스케일링' },
+            { id: 'Medication renewal', name: 'Medication renewal', nameKo: '처방약 재발급' },
+            { id: 'Follow-up exam', name: 'Follow-up exam', nameKo: '재진/경과 관찰' },
         ];
         this.symptomOptions = [
-            'Itch / Scratch',
-            'Limping / Joint',
-            'Lethargic / Low energy',
-            'Coughing / Reverse sneeze',
-            'Loss of Appetite',
-            'Skin redness / Rash',
-            'Ear shaking',
+            { id: 'Itch / Scratch', name: 'Itch / Scratch', nameKo: '가려움 / 긁음' },
+            { id: 'Limping / Joint', name: 'Limping / Joint', nameKo: '절뚝임 / 관절' },
+            { id: 'Lethargic / Low energy', name: 'Lethargic / Low energy', nameKo: '기력 저하' },
+            { id: 'Coughing / Reverse sneeze', name: 'Coughing / Reverse sneeze', nameKo: '기침 / 역재채기' },
+            { id: 'Loss of Appetite', name: 'Loss of Appetite', nameKo: '식욕 부진' },
+            { id: 'Skin redness / Rash', name: 'Skin redness / Rash', nameKo: '피부 발진 / 붉어짐' },
+            { id: 'Ear shaking', name: 'Ear shaking', nameKo: '귀 털기 / 귓병' },
         ];
         this.portionOptions = [
-            '0.5 cup',
-            '1.0 cup',
-            '1.5 cups',
-            '2.0 cups',
-            'Full bowl',
-            'Special treats',
+            { id: '0.5 cup', name: '0.5 cup', nameKo: '0.5 컵' },
+            { id: '1.0 cup', name: '1.0 cup', nameKo: '1.0 컵' },
+            { id: '1.5 cups', name: '1.5 cups', nameKo: '1.5 컵' },
+            { id: '2.0 cups', name: '2.0 cups', nameKo: '2.0 컵' },
+            { id: 'Full bowl', name: 'Full bowl', nameKo: '한 그릇 가득' },
+            { id: 'Special treats', name: 'Special treats', nameKo: '특별 간식' },
         ];
-        this.moodOptions = ['Zoomy', 'Regal', 'Guilty', 'Unbothered', 'Feral', 'Happy', 'Calm'];
+        this.moodOptions = MOOD_OPTIONS;
+        this.locationPresets = [
+            'Home / Indoor',
+            'Backyard',
+            'Park',
+            'Walk Route',
+            'Vet Clinic',
+            'Daycare',
+        ];
+        this.locationPresetsKo = [
+            '우리집 / 실내',
+            '마당 / 배변패드',
+            '공원 / 산책로',
+            '단지 내 산책',
+            '동물병원',
+            '데이케어',
+        ];
     }
     connectedCallback() {
         super.connectedCallback();
@@ -100,10 +122,81 @@ let DootySheet = class DootySheet extends LitElement {
             if (appState.loggerModalOpen) {
                 if (!this.wasOpen) {
                     // Just opened
-                    this.selectedType = appState.loggerEventType || null;
+                    if (appState.editingEvent) {
+                        const evt = appState.editingEvent;
+                        const meta = evt.metadata || {};
+                        this.selectedType = evt.eventType;
+                        // Extract user-entered note if wrapped in formatted string
+                        let userNote = evt.notes || '';
+                        const parts = userNote.split(' · ');
+                        if (parts.length > 1) {
+                            const last = parts[parts.length - 1].trim();
+                            if (last !== meta.mood && last !== meta.size && last !== meta.portion) {
+                                userNote = last;
+                            }
+                            else {
+                                userNote = '';
+                            }
+                        }
+                        else if (userNote.startsWith('응가') ||
+                            userNote.startsWith('쉬야') ||
+                            userNote.startsWith('Type ') ||
+                            userNote.startsWith('Pee') ||
+                            userNote.startsWith('Vomit') ||
+                            userNote.startsWith('구토') ||
+                            userNote.startsWith('Weigh-in') ||
+                            userNote.startsWith('체중')) {
+                            userNote = '';
+                        }
+                        this.notes = userNote;
+                        this.photoUrl = meta.photoUrl || '';
+                        this.locationName = meta.locationName || '';
+                        this.lat = evt.latitude;
+                        this.lng = evt.longitude;
+                        this.weatherText = meta.weather || '';
+                        if (meta.consistency)
+                            this.cons = meta.consistency;
+                        if (meta.size)
+                            this.size = meta.size;
+                        if (meta.mood)
+                            this.mood = meta.mood;
+                        if (meta.medication)
+                            this.selectedMed = meta.medication;
+                        if (meta.dosage)
+                            this.selectedMedDose = meta.dosage;
+                        if (meta.weightKg)
+                            this.weightKg = meta.weightKg;
+                        if (meta.walkDuration)
+                            this.walkMin = meta.walkDuration;
+                        if (meta.walkDistance)
+                            this.walkKm = meta.walkDistance;
+                        if (meta.visitReason)
+                            this.vetReason = meta.visitReason;
+                        if (meta.symptom)
+                            this.symptom = meta.symptom;
+                        if (meta.portion)
+                            this.portion = meta.portion;
+                        this.isLocating = false;
+                        this.showLocationPicker = false;
+                        this.isFetchingWeather = false;
+                    }
+                    else {
+                        this.selectedType = appState.loggerEventType || null;
+                        this.locationName = '';
+                        this.lat = undefined;
+                        this.lng = undefined;
+                        this.notes = '';
+                        this.photoUrl = '';
+                        this.customMedName = '';
+                        this.isLocating = false;
+                        this.showLocationPicker = false;
+                        this.weatherText = '';
+                        this.isFetchingWeather = false;
+                        this.autoFetchWeather();
+                    }
                     this.wasOpen = true;
                 }
-                else if (appState.loggerEventType && this.selectedType !== appState.loggerEventType) {
+                else if (appState.loggerEventType && this.selectedType !== appState.loggerEventType && !appState.editingEvent) {
                     this.selectedType = appState.loggerEventType;
                 }
             }
@@ -332,6 +425,164 @@ let DootySheet = class DootySheet extends LitElement {
       padding: 11px 13px;
       box-shadow: 2px 2px 0 #17140F;
       box-sizing: border-box;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+    }
+
+    .pill-info:hover {
+      background: #FFFBF0;
+    }
+
+    .pill-info.active-picker {
+      background: #FFE8A3;
+      box-shadow: 1px 1px 0 #17140F;
+      transform: translateY(1px);
+    }
+
+    .location-picker-card {
+      background: #FFF;
+      border: 3px solid #17140F;
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 3px 3px 0 #17140F;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: fadeIn 0.15s ease-out;
+    }
+
+    .picker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .picker-title {
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
+      font-weight: 800;
+      font-size: 14px;
+      color: #17140F;
+    }
+
+    .picker-close-btn {
+      background: #F3EFE6;
+      border: 2px solid #17140F;
+      border-radius: 8px;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .gps-btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .gps-action-btn {
+      flex: 1;
+      background: #FFE485;
+      border: 2.5px solid #17140F;
+      border-radius: 12px;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 13px;
+      color: #17140F;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 2px 2px 0 #17140F;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+
+    .gps-action-btn.tagged {
+      background: #9EE0C8;
+    }
+
+    .gps-action-btn:hover {
+      filter: brightness(1.03);
+    }
+
+    .gps-action-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
+    .gps-clear-btn {
+      background: #FFF;
+      border: 2.5px solid #17140F;
+      border-radius: 12px;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 12px;
+      color: #17140F;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 #17140F;
+    }
+
+    .picker-section-lbl {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #9A9080;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .location-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .location-chip {
+      background: #F3EFE6;
+      border: 2px solid #17140F;
+      border-radius: 10px;
+      padding: 5px 9px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #17140F;
+      cursor: pointer;
+      box-shadow: 1.5px 1.5px 0 #17140F;
+      transition: all 0.08s ease;
+    }
+
+    .location-chip.active {
+      background: #FFCE2E;
+      box-shadow: 0.5px 0.5px 0 #17140F;
+      transform: translateY(1px);
+    }
+
+    .custom-loc-input-row {
+      margin-top: 2px;
+    }
+
+    .custom-loc-input {
+      width: 100%;
+      border: 2.5px solid #17140F;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      color: #17140F;
+      background: #FFFBF2;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .custom-loc-input:focus {
+      border-color: #2B5BE8;
     }
 
     .pill-label {
@@ -705,6 +956,38 @@ let DootySheet = class DootySheet extends LitElement {
       box-shadow: 1px 1px 0 #17140F;
     }
 
+    .log-delete-btn {
+      background: #FFF;
+      border: 3px solid #E02424;
+      border-radius: 20px;
+      padding: 16px 18px;
+      text-align: center;
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
+      font-weight: 800;
+      font-size: 16px;
+      color: #E02424;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 #17140F;
+      user-select: none;
+      transition: background 0.1s ease, transform 0.1s ease, box-shadow 0.1s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex: none;
+    }
+
+    .log-delete-btn:hover {
+      background: #FEE2E2;
+      transform: translate(-1px, -1px);
+      box-shadow: 5px 5px 0 #17140F;
+    }
+
+    .log-delete-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
@@ -738,6 +1021,183 @@ let DootySheet = class DootySheet extends LitElement {
         }
         this.fileInput.click();
     }
+    selectPreset(preset) {
+        this.locationName = preset;
+        if (!this.lat && typeof navigator !== 'undefined' && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                this.lat = pos.coords.latitude;
+                this.lng = pos.coords.longitude;
+                this.requestUpdate();
+            }, () => { }, { timeout: 5000 });
+        }
+    }
+    clearLocation() {
+        this.locationName = '';
+        this.lat = undefined;
+        this.lng = undefined;
+        this.isLocating = false;
+    }
+    async fetchCurrentLocation() {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            this.dispatchEvent(new CustomEvent('dooty-toast', {
+                bubbles: true,
+                composed: true,
+                detail: {
+                    title: appState.currentLocale === 'ko' ? '위치 권한 필요' : 'GPS Unavailable',
+                    sub: appState.currentLocale === 'ko'
+                        ? '브라우저에서 위치 정보 접근을 허용해주세요.'
+                        : 'Geolocation is not supported or permitted by your browser.',
+                },
+            }));
+            return;
+        }
+        this.isLocating = true;
+        this.requestUpdate();
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            this.lat = pos.coords.latitude;
+            this.lng = pos.coords.longitude;
+            this.isLocating = false;
+            if (!this.locationName) {
+                this.locationName = `${this.lat.toFixed(4)}, ${this.lng.toFixed(4)}`;
+                this.tryReverseGeocode(this.lat, this.lng);
+            }
+            // Also refresh weather with the precise GPS coordinates
+            this.fetchWeather(this.lat, this.lng);
+            this.requestUpdate();
+            this.dispatchEvent(new CustomEvent('dooty-toast', {
+                bubbles: true,
+                composed: true,
+                detail: {
+                    title: appState.currentLocale === 'ko' ? 'GPS 위치 태그 완료' : 'GPS Location Tagged',
+                    sub: `${this.lat.toFixed(4)}, ${this.lng.toFixed(4)}`,
+                },
+            }));
+        }, (err) => {
+            console.warn('Geolocation failed:', err);
+            this.isLocating = false;
+            this.requestUpdate();
+            this.dispatchEvent(new CustomEvent('dooty-toast', {
+                bubbles: true,
+                composed: true,
+                detail: {
+                    title: appState.currentLocale === 'ko' ? '위치 확인 실패' : 'Location Tagging Failed',
+                    sub: err.message ||
+                        (appState.currentLocale === 'ko'
+                            ? '위치 정보를 가져올 수 없습니다.'
+                            : 'Could not retrieve GPS coordinates.'),
+                },
+            }));
+        }, { enableHighAccuracy: true, timeout: 8000 });
+    }
+    /** Silently request location on sheet open just for weather */
+    autoFetchWeather() {
+        if (typeof navigator === 'undefined' || !navigator.geolocation)
+            return;
+        this.isFetchingWeather = true;
+        this.weatherText = '';
+        this.requestUpdate();
+        navigator.geolocation.getCurrentPosition((pos) => {
+            this.fetchWeather(pos.coords.latitude, pos.coords.longitude);
+        }, () => {
+            this.isFetchingWeather = false;
+            this.weatherText = '';
+            this.requestUpdate();
+        }, { timeout: 5000 });
+    }
+    async fetchWeather(lat, lng) {
+        this.isFetchingWeather = true;
+        this.requestUpdate();
+        try {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&temperature_unit=celsius`;
+            const res = await fetch(url);
+            if (!res.ok)
+                throw new Error('Weather API error');
+            const data = await res.json();
+            const temp = Math.round(data.current?.temperature_2m ?? 0);
+            const code = data.current?.weather_code ?? 0;
+            const desc = this.wmoCodeToDescription(code);
+            this.weatherText = `${temp}° ${desc}`;
+        }
+        catch (e) {
+            console.warn('Weather fetch failed:', e);
+            this.weatherText = '';
+        }
+        finally {
+            this.isFetchingWeather = false;
+            this.requestUpdate();
+        }
+    }
+    wmoCodeToDescription(code) {
+        const isKo = appState.currentLocale === 'ko';
+        const map = {
+            0: ['☀️ clear', '☀️ 맑음'],
+            1: ['🌤️ mostly clear', '🌤️ 대체로 맑음'],
+            2: ['⛅ partly cloudy', '⛅ 구름 조금'],
+            3: ['☁️ overcast', '☁️ 흐림'],
+            45: ['🌫️ fog', '🌫️ 안개'],
+            48: ['🌫️ rime fog', '🌫️ 서리 안개'],
+            51: ['🌦️ light drizzle', '🌦️ 가벼운 이슬비'],
+            53: ['🌦️ drizzle', '🌦️ 이슬비'],
+            55: ['🌧️ heavy drizzle', '🌧️ 강한 이슬비'],
+            56: ['🌧️ freezing drizzle', '🌧️ 얼어붙는 이슬비'],
+            57: ['🌧️ heavy freezing drizzle', '🌧️ 강한 결빙 이슬비'],
+            61: ['🌧️ light rain', '🌧️ 약한 비'],
+            63: ['🌧️ rain', '🌧️ 비'],
+            65: ['🌧️ heavy rain', '🌧️ 강한 비'],
+            66: ['🌧️ freezing rain', '🌧️ 얼어붙는 비'],
+            67: ['🌧️ heavy freezing rain', '🌧️ 강한 결빙 비'],
+            71: ['🌨️ light snow', '🌨️ 약한 눈'],
+            73: ['🌨️ snow', '🌨️ 눈'],
+            75: ['❄️ heavy snow', '❄️ 강한 눈'],
+            77: ['🌨️ snow grains', '🌨️ 싸락눈'],
+            80: ['🌦️ light showers', '🌦️ 약한 소나기'],
+            81: ['🌧️ showers', '🌧️ 소나기'],
+            82: ['⛈️ heavy showers', '⛈️ 강한 소나기'],
+            85: ['🌨️ light snow showers', '🌨️ 약한 눈 소나기'],
+            86: ['❄️ heavy snow showers', '❄️ 강한 눈 소나기'],
+            95: ['⛈️ thunderstorm', '⛈️ 뇌우'],
+            96: ['⛈️ thunderstorm w/ hail', '⛈️ 우박 동반 뇌우'],
+            99: ['⛈️ severe thunderstorm', '⛈️ 강한 뇌우'],
+        };
+        const entry = map[code];
+        if (entry)
+            return isKo ? entry[1] : entry[0];
+        return isKo ? '☁️ 알 수 없음' : '☁️ unknown';
+    }
+    async tryReverseGeocode(lat, lng) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const road = data.address?.road ||
+                    data.address?.pedestrian ||
+                    data.address?.suburb ||
+                    data.address?.neighbourhood;
+                const city = data.address?.city ||
+                    data.address?.town ||
+                    data.address?.village ||
+                    data.address?.county;
+                if (road && city) {
+                    this.locationName = `${road}, ${city}`;
+                }
+                else if (road) {
+                    this.locationName = road;
+                }
+                else if (data.display_name) {
+                    const parts = data.display_name.split(',');
+                    this.locationName = parts.slice(0, 2).join(',').trim();
+                }
+                this.requestUpdate();
+            }
+        }
+        catch {
+            // Keep coordinate fallback
+        }
+    }
     async handleSave() {
         const isKo = appState.currentLocale === 'ko';
         const type = (this.selectedType || 'poop');
@@ -746,13 +1206,19 @@ let DootySheet = class DootySheet extends LitElement {
         let toastTitle = isKo ? '기록 완료!' : 'Logged it!';
         let toastSub = '';
         const metadata = {
-            timestamp: new Date().toISOString(),
+            timestamp: appState.editingEvent
+                ? appState.editingEvent.timestamp || new Date().toISOString()
+                : new Date().toISOString(),
             photoUrl: this.photoUrl || undefined,
-            locationName: this.locationName,
+            locationName: this.locationName || (this.lat ? `${this.lat.toFixed(4)}, ${this.lng?.toFixed(4)}` : undefined),
             weather: this.weatherText,
         };
+        const moodLabel = isKo ? (MOOD_MAP_KO[this.mood] || this.mood) : this.mood;
         if (type === 'poop') {
-            summaryNotes = `Type ${this.cons} (${this.consNames[this.cons - 1]}) · ${this.size} · ${this.mood}`;
+            const consLabel = isKo ? this.consNamesKo[this.cons - 1] : this.consNames[this.cons - 1];
+            summaryNotes = isKo
+                ? `응가 ${this.cons}단계 (${consLabel}) · ${this.size} · ${moodLabel}`
+                : `Type ${this.cons} (${this.consNames[this.cons - 1]}) · ${this.size} · ${this.mood}`;
             if (this.notes)
                 summaryNotes += ` · ${this.notes}`;
             metadata.consistency = this.cons;
@@ -765,7 +1231,9 @@ let DootySheet = class DootySheet extends LitElement {
                 : `${petName}’s log: Type ${this.cons} · ${this.size}`;
         }
         else if (type === 'pee') {
-            summaryNotes = `Pee · ${this.size} · ${this.mood}`;
+            summaryNotes = isKo
+                ? `쉬야 · ${this.size} · ${moodLabel}`
+                : `Pee · ${this.size} · ${this.mood}`;
             if (this.notes)
                 summaryNotes += ` · ${this.notes}`;
             metadata.size = this.size;
@@ -774,7 +1242,9 @@ let DootySheet = class DootySheet extends LitElement {
             toastSub = isKo ? '영역 표시 기록됨.' : 'Territory marked.';
         }
         else if (type === 'vomit') {
-            summaryNotes = `Vomit · Type ${this.cons} · ${this.mood}`;
+            summaryNotes = isKo
+                ? `구토 · ${this.cons}단계 · ${moodLabel}`
+                : `Vomit · Type ${this.cons} · ${this.mood}`;
             if (this.notes)
                 summaryNotes += ` · ${this.notes}`;
             metadata.consistency = this.cons;
@@ -794,7 +1264,9 @@ let DootySheet = class DootySheet extends LitElement {
             toastSub = isKo ? '다음 투약 일정에 반영됩니다.' : 'Next dose scheduled.';
         }
         else if (type === 'weight') {
-            summaryNotes = `Weigh-in: ${this.weightKg.toFixed(1)} kg`;
+            summaryNotes = isKo
+                ? `체중 측정: ${this.weightKg.toFixed(1)} kg`
+                : `Weigh-in: ${this.weightKg.toFixed(1)} kg`;
             if (this.notes)
                 summaryNotes += ` · ${this.notes}`;
             metadata.weightKg = this.weightKg;
@@ -802,16 +1274,21 @@ let DootySheet = class DootySheet extends LitElement {
             toastSub = `${this.weightKg.toFixed(1)} kg · ${isKo ? '체중 기록 완료' : 'recorded'}`;
         }
         else if (type === 'walk') {
-            summaryNotes = `Walk · ${this.walkMin} (${this.walkKm})`;
+            const walkMinLabel = isKo ? this.walkOptions.find(w => w.min === this.walkMin)?.minKo || this.walkMin : this.walkMin;
+            summaryNotes = isKo
+                ? `산책 · ${walkMinLabel} (${this.walkKm}) · ${moodLabel}`
+                : `Walk · ${this.walkMin} (${this.walkKm}) · ${this.mood}`;
             if (this.notes)
                 summaryNotes += ` · ${this.notes}`;
             metadata.walkDuration = this.walkMin;
             metadata.walkDistance = this.walkKm;
+            metadata.mood = this.mood;
             toastTitle = isKo ? '산책 기록 완료' : 'Walk logged';
-            toastSub = `${this.walkMin} · ${this.walkKm} · ${isKo ? '좋은 운동이었어요!' : 'Good effort.'}`;
+            toastSub = `${walkMinLabel} · ${this.walkKm} · ${isKo ? '좋은 운동이었어요!' : 'Good effort.'}`;
         }
         else if (type === 'vet') {
-            summaryNotes = `Vet visit: ${this.vetReason}`;
+            const vetLabel = isKo ? this.vetReasons.find(v => v.id === this.vetReason)?.nameKo || this.vetReason : this.vetReason;
+            summaryNotes = isKo ? `병원 진료: ${vetLabel}` : `Vet visit: ${this.vetReason}`;
             if (this.notes)
                 summaryNotes += ` · ${this.notes}`;
             metadata.visitReason = this.vetReason;
@@ -819,7 +1296,8 @@ let DootySheet = class DootySheet extends LitElement {
             toastSub = isKo ? '진료 내역 및 알림이 설정되었습니다.' : 'Reminder set.';
         }
         else if (type === 'symptom') {
-            summaryNotes = `Symptom: ${this.symptom}`;
+            const symLabel = isKo ? this.symptomOptions.find(s => s.id === this.symptom)?.nameKo || this.symptom : this.symptom;
+            summaryNotes = isKo ? `증상: ${symLabel}` : `Symptom: ${this.symptom}`;
             if (this.notes)
                 summaryNotes += ` · ${this.notes}`;
             metadata.symptom = this.symptom;
@@ -827,14 +1305,22 @@ let DootySheet = class DootySheet extends LitElement {
             toastSub = isKo ? '수의사 진료용 요약에 추가되었습니다.' : 'Added to vet-ready summary.';
         }
         else if (type === 'food' || type === 'water') {
-            summaryNotes = `Meal: ${this.portion}`;
+            const portionLabel = isKo ? this.portionOptions.find(p => p.id === this.portion)?.nameKo || this.portion : this.portion;
+            summaryNotes = isKo ? `식사: ${portionLabel}` : `Meal: ${this.portion}`;
             if (this.notes)
                 summaryNotes += ` · ${this.notes}`;
             metadata.portion = this.portion;
             toastTitle = isKo ? '식사 기록 완료' : 'Meal recorded';
-            toastSub = `${this.portion}`;
+            toastSub = `${portionLabel}`;
         }
-        await appState.logEvent(type, summaryNotes, metadata);
+        if (appState.editingEvent) {
+            await appState.updateEvent(appState.editingEvent.id, type, summaryNotes, metadata, this.lat, this.lng, appState.editingEvent.timestamp);
+            toastTitle = isKo ? '기록 수정 완료!' : 'Entry updated!';
+            toastSub = isKo ? '수정사항이 저장되었습니다.' : 'Changes saved.';
+        }
+        else {
+            await appState.logEvent(type, summaryNotes, metadata, this.lat, this.lng);
+        }
         this.close();
         // Trigger celebratory toast & confetti burst
         this.dispatchEvent(new CustomEvent('dooty-toast', {
@@ -846,11 +1332,35 @@ let DootySheet = class DootySheet extends LitElement {
             },
         }));
     }
+    async handleDelete() {
+        if (!appState.editingEvent)
+            return;
+        const isKo = appState.currentLocale === 'ko';
+        const confirmMsg = isKo ? '정말 이 기록을 삭제하시겠습니까?' : 'Are you sure you want to delete this entry?';
+        if (!window.confirm(confirmMsg))
+            return;
+        const eventId = appState.editingEvent.id;
+        await appState.deleteEvent(eventId);
+        this.close();
+        this.dispatchEvent(new CustomEvent('dooty-toast', {
+            bubbles: true,
+            composed: true,
+            detail: {
+                title: isKo ? '기록 삭제됨' : 'Entry deleted',
+                sub: isKo ? '기록이 정상적으로 삭제되었습니다.' : 'The log entry has been removed.',
+            },
+        }));
+    }
     close() {
         this.selectedType = null;
         this.notes = '';
         this.photoUrl = '';
         this.customMedName = '';
+        this.locationName = '';
+        this.lat = undefined;
+        this.lng = undefined;
+        this.isLocating = false;
+        this.showLocationPicker = false;
         appState.closeLogger();
     }
     render() {
@@ -870,11 +1380,14 @@ let DootySheet = class DootySheet extends LitElement {
             symptom: isKo ? ['이상 징후 기록', '생생할 때 기록해두세요'] : ['Something’s off', 'Describe it while it’s fresh'],
             food: isKo ? ['식사 및 사료', '급여량과 종류'] : ['Mealtime', 'Portion and food'],
         };
-        const currentTitlePair = this.selectedType
-            ? sheetTitles[this.selectedType] || (isKo ? ['기록 세부사항', '확인'] : ['What happened?', 'Confirm details'])
-            : isKo
-                ? ['무슨 일이 있었나요?', '종류를 선택하세요']
-                : ['What happened?', 'Pick a type'];
+        const isEditing = !!appState.editingEvent;
+        const currentTitlePair = isEditing
+            ? (isKo ? ['기록 수정하기', '내용을 변경하거나 삭제할 수 있습니다'] : ['Edit Log Entry', 'Update details or delete entry'])
+            : this.selectedType
+                ? sheetTitles[this.selectedType] || (isKo ? ['기록 세부사항', '확인'] : ['What happened?', 'Confirm details'])
+                : isKo
+                    ? ['무슨 일이 있었나요?', '종류를 선택하세요']
+                    : ['What happened?', 'Pick a type'];
         const sheetTitle = currentTitlePair[0];
         const sheetSub = currentTitlePair[1];
         const showCons = this.selectedType === 'poop' || this.selectedType === 'vomit';
@@ -893,7 +1406,7 @@ let DootySheet = class DootySheet extends LitElement {
           <div class="sheet-top">
             <div class="sheet-handle"></div>
             <div class="sheet-header-row">
-              ${isStep2
+              ${isStep2 && !isEditing
             ? html `
                     <div class="sheet-back-icon" @click=${() => this.handleBackToTypes()}>‹</div>
                   `
@@ -941,7 +1454,7 @@ let DootySheet = class DootySheet extends LitElement {
                       </div>
                       <div class="pill-info">
                         <div class="pill-label">${isKo ? '상태 / 날씨' : 'Weather / GPS'}</div>
-                        <div class="pill-val">${this.weatherText}</div>
+                        <div class="pill-val">${this.isFetchingWeather ? (isKo ? '날씨 확인중…' : 'fetching…') : (this.weatherText || (isKo ? '—' : '—'))}</div>
                       </div>
                     </div>
 
@@ -1068,7 +1581,7 @@ let DootySheet = class DootySheet extends LitElement {
                     this.walkKm = w.km;
                 }}
                                   >
-                                    <div class="walk-min">${w.min}</div>
+                                    <div class="walk-min">${isKo ? w.minKo : w.min}</div>
                                     <div class="walk-km">${w.km}</div>
                                   </div>
                                 `)}
@@ -1087,10 +1600,10 @@ let DootySheet = class DootySheet extends LitElement {
                             <div class="wrap-pill-row">
                               ${this.vetReasons.map((r) => html `
                                   <div
-                                    class="mood-pill ${this.vetReason === r ? 'active' : ''}"
-                                    @click=${() => (this.vetReason = r)}
+                                    class="mood-pill ${this.vetReason === r.id ? 'active' : ''}"
+                                    @click=${() => (this.vetReason = r.id)}
                                   >
-                                    ${r}
+                                    ${isKo ? r.nameKo : r.name}
                                   </div>
                                 `)}
                             </div>
@@ -1108,10 +1621,10 @@ let DootySheet = class DootySheet extends LitElement {
                             <div class="wrap-pill-row">
                               ${this.symptomOptions.map((sym) => html `
                                   <div
-                                    class="mood-pill ${this.symptom === sym ? 'active' : ''}"
-                                    @click=${() => (this.symptom = sym)}
+                                    class="mood-pill ${this.symptom === sym.id ? 'active' : ''}"
+                                    @click=${() => (this.symptom = sym.id)}
                                   >
-                                    ${sym}
+                                    ${isKo ? sym.nameKo : sym.name}
                                   </div>
                                 `)}
                             </div>
@@ -1129,10 +1642,10 @@ let DootySheet = class DootySheet extends LitElement {
                             <div class="wrap-pill-row">
                               ${this.portionOptions.map((p) => html `
                                   <div
-                                    class="mood-pill ${this.portion === p ? 'active' : ''}"
-                                    @click=${() => (this.portion = p)}
+                                    class="mood-pill ${this.portion === p.id ? 'active' : ''}"
+                                    @click=${() => (this.portion = p.id)}
                                   >
-                                    ${p}
+                                    ${isKo ? p.nameKo : p.name}
                                   </div>
                                 `)}
                             </div>
@@ -1150,10 +1663,10 @@ let DootySheet = class DootySheet extends LitElement {
                             <div class="wrap-pill-row">
                               ${this.moodOptions.map((m) => html `
                                   <div
-                                    class="mood-pill ${this.mood === m ? 'active' : ''}"
-                                    @click=${() => (this.mood = m)}
+                                    class="mood-pill ${this.mood === m.id ? 'active' : ''}"
+                                    @click=${() => (this.mood = m.id)}
                                   >
-                                    ${m}
+                                    ${isKo ? m.nameKo : m.name}
                                   </div>
                                 `)}
                             </div>
@@ -1163,10 +1676,23 @@ let DootySheet = class DootySheet extends LitElement {
 
                     <!-- Location & Logged By -->
                     <div class="pill-row">
-                      <div class="pill-info">
-                        <div class="pill-label">${isKo ? '위치' : 'Location'}</div>
-                        <div class="pill-val">${this.locationName}</div>
-                        <div class="pill-sub">${isKo ? 'GPS 핀 연결됨' : 'pin dropped'}</div>
+                      <div
+                        class="pill-info ${this.showLocationPicker ? 'active-picker' : ''}"
+                        @click=${() => (this.showLocationPicker = !this.showLocationPicker)}
+                      >
+                        <div class="pill-label">${isKo ? '위치' : 'Location'} 📍</div>
+                        <div class="pill-val" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                          ${this.isLocating
+                ? (isKo ? 'GPS 확인 중...' : 'Locating GPS...')
+                : (this.locationName || (this.lat ? `${this.lat.toFixed(4)}, ${this.lng?.toFixed(4)}` : (isKo ? '위치 추가' : 'Add location')))}
+                        </div>
+                        <div class="pill-sub">
+                          ${this.lat
+                ? (isKo ? 'GPS 연결됨 · 탭하여 변경' : 'GPS Tagged · tap to edit')
+                : (this.locationName
+                    ? (isKo ? '장소 지정됨 · 탭하여 변경' : 'Custom spot · tap to edit')
+                    : (isKo ? '탭하여 GPS/장소 태그' : 'Tap to tag GPS/spot'))}
+                        </div>
                       </div>
                       <div class="pill-info">
                         <div class="pill-label">${isKo ? '기록자' : 'Logged by'}</div>
@@ -1178,6 +1704,63 @@ let DootySheet = class DootySheet extends LitElement {
                         <div class="pill-sub">${isKo ? '가족 구성원' : 'tap to change'}</div>
                       </div>
                     </div>
+
+                    ${this.showLocationPicker
+                ? html `
+                          <div class="location-picker-card">
+                            <div class="picker-header">
+                              <span class="picker-title">${isKo ? '위치 태그 설정' : 'Attach Location'}</span>
+                              <button class="picker-close-btn" @click=${() => (this.showLocationPicker = false)}>✕</button>
+                            </div>
+
+                            <div class="gps-btn-row">
+                              <button
+                                class="gps-action-btn ${this.lat ? 'tagged' : ''}"
+                                @click=${() => this.fetchCurrentLocation()}
+                                ?disabled=${this.isLocating}
+                              >
+                                <span>${this.isLocating ? '⏳' : this.lat ? '📍' : '📡'}</span>
+                                <span>
+                                  ${this.isLocating
+                    ? (isKo ? 'GPS 위치 수신 중...' : 'Getting GPS...')
+                    : this.lat
+                        ? (isKo ? `GPS 연결됨 (${this.lat.toFixed(4)}, ${this.lng?.toFixed(4)})` : `GPS Tagged (${this.lat.toFixed(4)}, ${this.lng?.toFixed(4)})`)
+                        : (isKo ? '현재 GPS 위치 태그하기' : 'Tag Current GPS')}
+                                </span>
+                              </button>
+                              ${this.lat || this.locationName
+                    ? html `
+                                    <button class="gps-clear-btn" @click=${() => this.clearLocation()}>
+                                      ${isKo ? '초기화' : 'Clear'}
+                                    </button>
+                                  `
+                    : null}
+                            </div>
+
+                            <div class="picker-section-lbl">${isKo ? '자주 쓰는 장소' : 'Quick Spots'}</div>
+                            <div class="location-chips-row">
+                              ${(isKo ? this.locationPresetsKo : this.locationPresets).map((preset) => html `
+                                  <div
+                                    class="location-chip ${this.locationName === preset ? 'active' : ''}"
+                                    @click=${() => this.selectPreset(preset)}
+                                  >
+                                    ${preset}
+                                  </div>
+                                `)}
+                            </div>
+
+                            <div class="custom-loc-input-row">
+                              <input
+                                type="text"
+                                class="custom-loc-input"
+                                placeholder="${isKo ? '직접 장소명 입력 (예: 센트럴파크 잔디밭)' : 'Or type custom name (e.g. Elm St & 4th)...'}"
+                                .value=${this.locationName}
+                                @input=${(e) => (this.locationName = e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        `
+                : null}
 
                     <!-- Photo & Notes -->
                     <div class="photo-notes-row">
@@ -1209,9 +1792,22 @@ let DootySheet = class DootySheet extends LitElement {
 
           ${isStep2
             ? html `
-                <div class="sheet-bottom">
-                  <div class="log-submit-btn" @click=${() => this.handleSave()}>
-                    ${isKo ? '기록하기!' : 'Log it!'}
+                <div class="sheet-bottom" style="${isEditing ? 'display: flex; gap: 10px; align-items: center;' : ''}">
+                  ${isEditing
+                ? html `
+                        <button
+                          class="log-delete-btn"
+                          @click=${() => this.handleDelete()}
+                          title=${isKo ? '기록 삭제' : 'Delete log'}
+                        >
+                          🗑️ ${isKo ? '삭제' : 'Delete'}
+                        </button>
+                      `
+                : null}
+                  <div class="log-submit-btn" style="flex: 1;" @click=${() => this.handleSave()}>
+                    ${isEditing
+                ? isKo ? '수정 완료!' : 'Save changes'
+                : isKo ? '기록하기!' : 'Log it!'}
                   </div>
                 </div>
               `
@@ -1271,7 +1867,22 @@ __decorate([
 ], DootySheet.prototype, "locationName", void 0);
 __decorate([
     state()
+], DootySheet.prototype, "lat", void 0);
+__decorate([
+    state()
+], DootySheet.prototype, "lng", void 0);
+__decorate([
+    state()
+], DootySheet.prototype, "isLocating", void 0);
+__decorate([
+    state()
+], DootySheet.prototype, "showLocationPicker", void 0);
+__decorate([
+    state()
 ], DootySheet.prototype, "weatherText", void 0);
+__decorate([
+    state()
+], DootySheet.prototype, "isFetchingWeather", void 0);
 DootySheet = __decorate([
     customElement('dooty-sheet')
 ], DootySheet);

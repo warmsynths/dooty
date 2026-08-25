@@ -16,7 +16,12 @@ export declare class DootySheet extends LitElement {
     private photoUrl;
     private notes;
     private locationName;
+    private lat?;
+    private lng?;
+    private isLocating;
+    private showLocationPicker;
     private weatherText;
+    private isFetchingWeather;
     private unsubscribe?;
     private fileInput?;
     private wasOpen;
@@ -35,7 +40,18 @@ export declare class DootySheet extends LitElement {
     private handleSelectType;
     private handleBackToTypes;
     private triggerPhotoUpload;
+    private locationPresets;
+    private locationPresetsKo;
+    private selectPreset;
+    private clearLocation;
+    private fetchCurrentLocation;
+    /** Silently request location on sheet open just for weather */
+    private autoFetchWeather;
+    private fetchWeather;
+    private wmoCodeToDescription;
+    private tryReverseGeocode;
     private handleSave;
+    private handleDelete;
     private close;
     render(): import("lit-html").TemplateResult<1> | null;
 }

@@ -4,6 +4,7 @@ import { Bindings } from './services/supabase.js';
 import { DataService } from './services/store.js';
 import {
   CreateEventDTO,
+  UpdateEventDTO,
   CreateHouseholdDTO,
   DogNotesImportItem,
   PetEvent,
@@ -435,6 +436,62 @@ app.post('/api/events', async (c) => {
     return c.json(event, 201);
   } catch (err: any) {
     return c.json({ error: err.message || 'Failed to create event' }, 500);
+  }
+});
+
+app.patch('/api/events/:id', async (c) => {
+  try {
+    const service = new DataService(c.env);
+    const user = await getAuthUser(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const eventId = c.req.param('id');
+    const existingEvent = await service.getEvent(eventId);
+    if (!existingEvent) {
+      return c.json({ error: 'Event not found' }, 404);
+    }
+
+    const isMember = await service.isHouseholdMember(user.id, existingEvent.householdId);
+    if (!isMember) {
+      return c.json({ error: 'Forbidden: You are not a member of this household' }, 403);
+    }
+
+    const body = await c.req.json<UpdateEventDTO>();
+    const updated = await service.updateEvent(eventId, body);
+    if (!updated) {
+      return c.json({ error: 'Failed to update event' }, 500);
+    }
+    return c.json(updated);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to update event' }, 500);
+  }
+});
+
+app.delete('/api/events/:id', async (c) => {
+  try {
+    const service = new DataService(c.env);
+    const user = await getAuthUser(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const eventId = c.req.param('id');
+    const existingEvent = await service.getEvent(eventId);
+    if (!existingEvent) {
+      return c.json({ success: true });
+    }
+
+    const isMember = await service.isHouseholdMember(user.id, existingEvent.householdId);
+    if (!isMember) {
+      return c.json({ error: 'Forbidden: You are not a member of this household' }, 403);
+    }
+
+    await service.deleteEvent(eventId);
+    return c.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to delete event' }, 500);
   }
 });
 

@@ -612,4 +612,107 @@ export const translations = {
         },
     },
 };
+export function formatLocalizedEventNotes(notes, eventType, isKo) {
+    if (!notes) {
+        const defaultLabelsKo = {
+            poop: '응가',
+            pee: '쉬야',
+            walk: '산책',
+            food: '밥/사료',
+            water: '물',
+            medicine: '약/영양제',
+            grooming: '목욕/미용',
+            playing: '놀이',
+            vomit: '구토',
+            weight: '몸무게',
+            vet: '병원 진료',
+            symptom: '증상 메모',
+            nap: '수면/낮잠',
+            training: '훈련/교육',
+        };
+        return isKo
+            ? `${defaultLabelsKo[eventType] || eventType} · 기록됨`
+            : `${eventType.toUpperCase()} · Logged`;
+    }
+    if (isKo) {
+        let result = notes;
+        // Mood translations
+        result = result.replace(/\bZoomy\b/g, '우다다');
+        result = result.replace(/\bRegal\b/g, '도도함');
+        result = result.replace(/\bGuilty\b/g, '눈치봄');
+        result = result.replace(/\bUnbothered\b/g, '무덤덤');
+        result = result.replace(/\bFeral\b/g, '천방지축');
+        result = result.replace(/\bHappy\b/g, '행복함');
+        result = result.replace(/\bCalm\b/g, '차분함');
+        // Type / category prefixes
+        result = result.replace(/^Type\s+(\d+)/, '응가 $1단계');
+        result = result.replace(/^Pee\b/, '쉬야');
+        result = result.replace(/^Vomit\s+·\s+Type\s+(\d+)/, '구토 · $1단계');
+        result = result.replace(/^Vomit\b/, '구토');
+        result = result.replace(/^Walk\b/, '산책');
+        result = result.replace(/^Meal:\s*/, '식사: ');
+        result = result.replace(/^Vet visit:\s*/, '병원 진료: ');
+        result = result.replace(/^Symptom:\s*/, '증상: ');
+        result = result.replace(/^Weigh-in:\s*/, '체중 측정: ');
+        // Consistency descriptions
+        result = result.replace(/hard pellets/g, '단단한 토끼똥');
+        result = result.replace(/lumpy log/g, '울퉁불퉁한 변');
+        result = result.replace(/cracked log/g, '약간 갈라진 변');
+        result = result.replace(/textbook — the dream/g, '완벽한 황금변 (최고)');
+        result = result.replace(/soft blobs/g, '무른 덩어리변');
+        result = result.replace(/mushy/g, '형태 없는 묽은변');
+        result = result.replace(/liquid/g, '설사/수분성 액체');
+        // Vet reasons
+        result = result.replace(/Annual check-up/g, '정기 검진');
+        result = result.replace(/Vaccination booster/g, '예방 접종');
+        result = result.replace(/Loose stool consult/g, '배변/설사 진료');
+        result = result.replace(/Dental scaling/g, '치과/스케일링');
+        result = result.replace(/Medication renewal/g, '처방약 재발급');
+        result = result.replace(/Follow-up exam/g, '재진/경과 관찰');
+        // Symptoms
+        result = result.replace(/Itch \/ Scratch/g, '가려움 / 긁음');
+        result = result.replace(/Limping \/ Joint/g, '절뚝임 / 관절');
+        result = result.replace(/Lethargic \/ Low energy/g, '기력 저하');
+        result = result.replace(/Coughing \/ Reverse sneeze/g, '기침 / 역재채기');
+        result = result.replace(/Loss of Appetite/g, '식욕 부진');
+        result = result.replace(/Skin redness \/ Rash/g, '피부 발진 / 붉어짐');
+        result = result.replace(/Ear shaking/g, '귀 털기 / 귓병');
+        // Portions
+        result = result.replace(/0\.5 cup/g, '0.5 컵');
+        result = result.replace(/1\.0 cup/g, '1.0 컵');
+        result = result.replace(/1\.5 cups/g, '1.5 컵');
+        result = result.replace(/2\.0 cups/g, '2.0 컵');
+        result = result.replace(/Full bowl/g, '한 그릇 가득');
+        result = result.replace(/Special treats/g, '특별 간식');
+        return result;
+    }
+    else {
+        let result = notes;
+        // Translate from Korean to English if needed
+        result = result.replace(/우다다/g, 'Zoomy');
+        result = result.replace(/도도함/g, 'Regal');
+        result = result.replace(/눈치봄/g, 'Guilty');
+        result = result.replace(/무덤덤/g, 'Unbothered');
+        result = result.replace(/천방지축/g, 'Feral');
+        result = result.replace(/행복함/g, 'Happy');
+        result = result.replace(/차분함/g, 'Calm');
+        result = result.replace(/^응가\s+(\d+)단계/, 'Type $1');
+        result = result.replace(/^쉬야\b/, 'Pee');
+        result = result.replace(/^구토\s+·\s+(\d+)단계/, 'Vomit · Type $1');
+        result = result.replace(/^구토\b/, 'Vomit');
+        result = result.replace(/^산책\b/, 'Walk');
+        result = result.replace(/^식사:\s*/, 'Meal: ');
+        result = result.replace(/^병원 진료:\s*/, 'Vet visit: ');
+        result = result.replace(/^증상:\s*/, 'Symptom: ');
+        result = result.replace(/^체중 측정:\s*/, 'Weigh-in: ');
+        result = result.replace(/단단한 토끼똥/g, 'hard pellets');
+        result = result.replace(/울퉁불퉁한 변/g, 'lumpy log');
+        result = result.replace(/약간 갈라진 변/g, 'cracked log');
+        result = result.replace(/완벽한 황금변 \(최고\)/g, 'textbook — the dream');
+        result = result.replace(/무른 덩어리변/g, 'soft blobs');
+        result = result.replace(/형태 없는 묽은변/g, 'mushy');
+        result = result.replace(/설사\/수분성 액체/g, 'liquid');
+        return result;
+    }
+}
 //# sourceMappingURL=index.js.map

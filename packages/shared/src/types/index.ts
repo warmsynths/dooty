@@ -190,6 +190,17 @@ export interface CreateEventDTO {
   metadata?: Record<string, any>;
 }
 
+export interface UpdateEventDTO {
+  eventType?: EventType;
+  loggedByName?: string;
+  loggedByUserId?: string;
+  timestamp?: string;
+  notes?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  metadata?: Record<string, any>;
+}
+
 export interface WalkPoint {
   latitude: number;
   longitude: number;

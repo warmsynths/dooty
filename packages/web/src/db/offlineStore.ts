@@ -176,3 +176,22 @@ export async function removePendingEvent(localId: string): Promise<void> {
   }
 }
 
+export async function deleteEventOffline(eventId: string): Promise<void> {
+  try {
+    const db = await getOfflineDB();
+    await db.delete('events', eventId);
+    await db.delete('pending_events', eventId);
+  } catch (err) {
+    console.warn('Failed to delete offline event:', err);
+  }
+}
+
+export async function updateEventOffline(event: PetEvent): Promise<void> {
+  try {
+    const db = await getOfflineDB();
+    await db.put('events', event);
+  } catch (err) {
+    console.warn('Failed to update offline event:', err);
+  }
+}
+

@@ -149,4 +149,23 @@ export async function removePendingEvent(localId) {
         console.warn('Failed to remove pending event:', err);
     }
 }
+export async function deleteEventOffline(eventId) {
+    try {
+        const db = await getOfflineDB();
+        await db.delete('events', eventId);
+        await db.delete('pending_events', eventId);
+    }
+    catch (err) {
+        console.warn('Failed to delete offline event:', err);
+    }
+}
+export async function updateEventOffline(event) {
+    try {
+        const db = await getOfflineDB();
+        await db.put('events', event);
+    }
+    catch (err) {
+        console.warn('Failed to update offline event:', err);
+    }
+}
 //# sourceMappingURL=offlineStore.js.map
