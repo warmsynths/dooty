@@ -28,41 +28,26 @@ export class WatslogApp extends LitElement {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       width: 100%;
       min-height: 100vh;
       min-height: 100dvh;
-      background: #F4EFE2;
+      background: var(--color-cream-light, #FFFBF2);
       box-sizing: border-box;
     }
 
     /* Main Container */
     .device-shell {
       width: 100%;
-      max-width: 440px;
+      max-width: 480px;
       height: 100vh;
       height: 100dvh;
-      background: #FFFBF2;
+      background: var(--color-cream-light, #FFFBF2);
       position: relative;
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
       overflow: hidden;
-    }
-
-    @media (min-width: 500px) {
-      :host {
-        padding: 24px 16px;
-      }
-      .device-shell {
-        height: 844px;
-        max-height: calc(100vh - 48px);
-        min-height: 580px;
-        border: 3px solid #17140F;
-        border-radius: 36px;
-        box-shadow: 0 20px 48px rgba(60, 50, 30, 0.18);
-        overflow: hidden;
-      }
     }
 
     .device-viewport {

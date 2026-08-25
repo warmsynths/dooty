@@ -42,11 +42,12 @@ body.lang-ko {
 
 body {
   margin: 0;
-  background: var(--color-cream);
+  background: var(--color-cream-light);
   font-family: var(--font-body);
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 a {

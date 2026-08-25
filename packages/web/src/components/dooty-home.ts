@@ -95,6 +95,33 @@ export class DootyHome extends LitElement {
       border-radius: 3px;
     }
 
+    .sync-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #FFF9E9;
+      border: 1.5px solid #17140F;
+      border-radius: 10px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #6A6152;
+      box-shadow: 1.5px 1.5px 0 #17140F;
+    }
+
+    .sync-spin {
+      width: 8px;
+      height: 8px;
+      border: 1.5px solid #17140F;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin-sync 0.7s linear infinite;
+    }
+
+    @keyframes spin-sync {
+      to { transform: rotate(360deg); }
+    }
+
     /* Prediction Card */
     .prediction-card {
       background: #FFCE2E;
@@ -461,7 +488,17 @@ export class DootyHome extends LitElement {
 
         <div class="greeting-col">
           <div class="greeting-text">${timeGreeting}</div>
-          <div class="vibe-text">${vibeText}</div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 1px;">
+            <span class="vibe-text">${vibeText}</span>
+            ${appState.isSyncing
+              ? html`
+                  <span class="sync-pill">
+                    <span class="sync-spin"></span>
+                    <span>${isKo ? '동기화 중' : 'Syncing'}</span>
+                  </span>
+                `
+              : null}
+          </div>
         </div>
 
         <div

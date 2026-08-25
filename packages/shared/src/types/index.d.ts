@@ -277,4 +277,12 @@ export interface PetAnalytics {
         daysWithoutPoop: number;
     };
 }
+export type TimeRangeFilter = '7d' | '30d' | '1y' | 'all';
+export interface GetEventsQuery {
+    since?: string;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+}
 //# sourceMappingURL=index.d.ts.map

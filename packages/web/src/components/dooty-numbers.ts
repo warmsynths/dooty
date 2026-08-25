@@ -33,6 +33,41 @@ export class DootyNumbers extends LitElement {
       margin-top: 2px;
     }
 
+    .time-selector-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      background: #E8DEC6;
+      border: 3px solid #17140F;
+      border-radius: 18px;
+      padding: 4px;
+      box-shadow: 3px 3px 0 #17140F;
+    }
+
+    .time-pill-btn {
+      flex: 1;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      background: transparent;
+      padding: 7px 4px;
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
+      font-weight: 800;
+      font-size: 12.5px;
+      color: #6A6152;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s ease;
+      user-select: none;
+    }
+
+    .time-pill-btn.active {
+      background: #FFCE2E;
+      border-color: #17140F;
+      color: #17140F;
+      box-shadow: 2px 2px 0 #17140F;
+      transform: translate(-1px, -1px);
+    }
+
     .card-block {
       background: #FFF;
       border: 3px solid #17140F;
@@ -278,7 +313,7 @@ export class DootyNumbers extends LitElement {
       margin-top: 3px;
     }
 
-    /* Weather & Treats Correlation */
+    /* Time & Routine Patterns */
     .corr-row {
       display: flex;
       align-items: center;
@@ -286,8 +321,8 @@ export class DootyNumbers extends LitElement {
     }
 
     .corr-lbl {
-      width: 74px;
-      font-size: 12px;
+      width: 96px;
+      font-size: 11px;
       color: #17140F;
       font-weight: 800;
       flex: none;
@@ -314,7 +349,7 @@ export class DootyNumbers extends LitElement {
     }
 
     .corr-val {
-      width: 42px;
+      width: 44px;
       text-align: right;
       font-size: 11.5px;
       color: #6A6152;
@@ -335,7 +370,23 @@ export class DootyNumbers extends LitElement {
 
   render() {
     const isKo = appState.currentLocale === 'ko';
-    const events = appState.events || [];
+    const timeRange = appState.analyticsTimeRange || '30d';
+    const allEvents = appState.events || [];
+
+    let filteredEvents = allEvents;
+    const nowMs = Date.now();
+    if (timeRange === '7d') {
+      const cut = nowMs - 7 * 86400000;
+      filteredEvents = allEvents.filter((e) => new Date(e.timestamp).getTime() >= cut);
+    } else if (timeRange === '30d') {
+      const cut = nowMs - 30 * 86400000;
+      filteredEvents = allEvents.filter((e) => new Date(e.timestamp).getTime() >= cut);
+    } else if (timeRange === '1y') {
+      const cut = nowMs - 365 * 86400000;
+      filteredEvents = allEvents.filter((e) => new Date(e.timestamp).getTime() >= cut);
+    }
+
+    const events = filteredEvents;
     const totalCount = events.length;
 
     // Heatmap generation
@@ -543,33 +594,135 @@ export class DootyNumbers extends LitElement {
       },
     ];
 
-    // Weather & Treats correlations
+    // Real Time & Routine Correlations calculated directly from events
+    const avgEventsPerHour = totalCount > 0 ? totalCount / 24 : 1;
+
+    // 1. Morning (6:00 - 11:59) - 6 hours
+    const morningTotal = hourCounts.slice(6, 12).reduce((a, b) => a + b, 0);
+    const morningRate = morningTotal / 6;
+    const rawMorningDev =
+      totalCount > 0 ? Math.round(((morningRate - avgEventsPerHour) / avgEventsPerHour) * 100) : 25;
+
+    // 2. Afternoon (12:00 - 17:59) - 6 hours
+    const afternoonTotal = hourCounts.slice(12, 18).reduce((a, b) => a + b, 0);
+    const afternoonRate = afternoonTotal / 6;
+    const rawAfternoonDev =
+      totalCount > 0 ? Math.round(((afternoonRate - avgEventsPerHour) / avgEventsPerHour) * 100) : 10;
+
+    // 3. Weekend vs Weekday
+    const weekendEvents =
+      heatmapCounts[5].reduce((a, b) => a + b, 0) + heatmapCounts[6].reduce((a, b) => a + b, 0);
+    const weekdayEvents = totalCount - weekendEvents;
+    const weekendRate = weekendEvents / 2;
+    const weekdayRate = weekdayEvents / 5;
+    const rawWeekendDev =
+      weekdayRate > 0 && totalCount > 0
+        ? Math.round(((weekendRate - weekdayRate) / weekdayRate) * 100)
+        : totalCount > 0
+        ? 0
+        : 14;
+
+    // 4. Night (21:00 - 5:59) - 9 hours
+    const nightTotal =
+      hourCounts[21] +
+      hourCounts[22] +
+      hourCounts[23] +
+      hourCounts[0] +
+      hourCounts[1] +
+      hourCounts[2] +
+      hourCounts[3] +
+      hourCounts[4] +
+      hourCounts[5];
+    const nightRate = nightTotal / 9;
+    const rawNightDev =
+      totalCount > 0 ? Math.round(((nightRate - avgEventsPerHour) / avgEventsPerHour) * 100) : -65;
+
+    const makeCorrItem = (label: string, dev: number, color: string) => {
+      const isPositive = dev >= 0;
+      const absVal = Math.abs(dev);
+      // Scale bar visual width between 4% and 48%
+      const barWidth = Math.min(48, Math.max(3, Math.round((absVal / 100) * 48)));
+      const leftPos = isPositive ? '50%' : `${50 - barWidth}%`;
+      const valStr = dev === 0 ? '0%' : `${isPositive ? '+' : '−'}${absVal}%`;
+      return {
+        l: label,
+        v: valStr,
+        left: leftPos,
+        w: `${barWidth}%`,
+        bg: color,
+      };
+    };
+
     const corrs = [
-      { l: isKo ? '비 오는 날' : 'Rain', v: '−18%', left: '32%', w: '18%', bg: '#9EC6E8' },
-      { l: isKo ? '새 간식' : 'New treats', v: '+41%', left: '50%', w: '41%', bg: '#FF5A3C' },
-      { l: isKo ? '긴 산책' : 'Long walks', v: '+22%', left: '50%', w: '22%', bg: '#1FC99B' },
-      { l: isKo ? '더위 > 28°' : 'Heat > 28°', v: '−9%', left: '41%', w: '9%', bg: '#FFCE2E' },
+      makeCorrItem(isKo ? '오전 6–12시' : 'Morning (6–12)', rawMorningDev, '#FF9A3C'),
+      makeCorrItem(isKo ? '오후 12–18시' : 'Afternoon (12–18)', rawAfternoonDev, '#1FC99B'),
+      makeCorrItem(isKo ? '주말 (토·일)' : 'Weekends', rawWeekendDev, '#FF5A3C'),
+      makeCorrItem(isKo ? '심야 21–6시' : 'Night (21–6)', rawNightDev, '#9EC6E8'),
     ];
+
+    const rangeBadgeText =
+      timeRange === '7d'
+        ? isKo ? '7일' : '7 DAYS'
+        : timeRange === '30d'
+        ? isKo ? '30일' : '30 DAYS'
+        : timeRange === '1y'
+        ? isKo ? '1년' : '1 YEAR'
+        : isKo ? '전체' : 'ALL TIME';
+
+    const subText =
+      timeRange === '7d'
+        ? isKo ? `지난 7일간 ${totalCount.toLocaleString()}건` : `${totalCount.toLocaleString()} logs in last 7 days`
+        : timeRange === '30d'
+        ? isKo ? `지난 30일간 ${totalCount.toLocaleString()}건` : `${totalCount.toLocaleString()} logs in last 30 days`
+        : timeRange === '1y'
+        ? isKo ? `지난 1년간 ${totalCount.toLocaleString()}건` : `${totalCount.toLocaleString()} logs in last year`
+        : isKo
+        ? totalCount > 0
+          ? `${sinceDateStrKo}부터 ${totalCount.toLocaleString()}건`
+          : '2021년 3월부터 1,204건'
+        : totalCount > 0
+        ? `${totalCount.toLocaleString()} logs since ${sinceDateStrEn}`
+        : '1,204 logs since March 2021';
 
     return html`
       <div class="page-header">
         <div class="page-title">${isKo ? '숫자들' : 'The numbers'}</div>
-        <div class="page-sub">
-          ${isKo
-            ? totalCount > 0
-              ? `${sinceDateStrKo}부터 ${totalCount.toLocaleString()}건`
-              : '2021년 3월부터 1,204건'
-            : totalCount > 0
-            ? `${totalCount.toLocaleString()} logs since ${sinceDateStrEn}`
-            : '1,204 logs since March 2021'}
-        </div>
+        <div class="page-sub">${subText}</div>
+      </div>
+
+      <!-- Segmented Time-Range Selector -->
+      <div class="time-selector-row">
+        <button
+          class="time-pill-btn ${timeRange === '7d' ? 'active' : ''}"
+          @click=${() => appState.setAnalyticsTimeRange('7d')}
+        >
+          ${isKo ? '7일' : '7D'}
+        </button>
+        <button
+          class="time-pill-btn ${timeRange === '30d' ? 'active' : ''}"
+          @click=${() => appState.setAnalyticsTimeRange('30d')}
+        >
+          ${isKo ? '30일' : '30D'}
+        </button>
+        <button
+          class="time-pill-btn ${timeRange === '1y' ? 'active' : ''}"
+          @click=${() => appState.setAnalyticsTimeRange('1y')}
+        >
+          ${isKo ? '1년' : '1Y'}
+        </button>
+        <button
+          class="time-pill-btn ${timeRange === 'all' ? 'active' : ''}"
+          @click=${() => appState.setAnalyticsTimeRange('all')}
+        >
+          ${isKo ? '전체' : 'ALL'}
+        </button>
       </div>
 
       <!-- When it happens 24h Heatmap -->
       <div class="card-block">
         <div class="card-header">
           <div class="card-title">${isKo ? '언제 하나요' : 'When it happens'}</div>
-          <div class="card-badge">${isKo ? '7일' : '7 DAYS'}</div>
+          <div class="card-badge">${rangeBadgeText}</div>
         </div>
 
         <!-- Hour column markers (12a, 6a, 12p, 6p, 11p) -->
@@ -702,11 +855,11 @@ export class DootyNumbers extends LitElement {
         </div>
       </div>
 
-      <!-- Weather & Treats -->
+      <!-- Time & Routine Patterns -->
       <div class="card-block">
-        <div class="card-title">${isKo ? '날씨 & 간식' : 'Weather & treats'}</div>
+        <div class="card-title">${isKo ? '시간 & 일과 패턴' : 'Time & routine patterns'}</div>
         <div style="font-size: 11.5px; font-weight: 600; color: #6A6152; margin: 2px 0 13px;">
-          ${isKo ? '무엇이 변화를 주는지. 의학적 조언이 아닙니다.' : 'What moves the needle. Not medical advice.'}
+          ${isKo ? '평균 기준 대비 시간대별 배변 주기 변화율' : 'Deviation from average daily baseline.'}
         </div>
         <div style="display: flex; flex-direction: column; gap: 11px;">
           ${corrs.map(

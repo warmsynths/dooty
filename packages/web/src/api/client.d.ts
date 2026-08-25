@@ -1,4 +1,4 @@
-import { Household, Pet, PetEvent, CreateEventDTO, CreateHouseholdDTO, PetAnalytics, DogNotesImportItem, WalkRoute, SignUpDTO, SignInDTO, AuthSessionResponse } from '@watslog/shared';
+import { Household, Pet, PetEvent, CreateEventDTO, CreateHouseholdDTO, PetAnalytics, DogNotesImportItem, WalkRoute, SignUpDTO, SignInDTO, AuthSessionResponse, GetEventsQuery } from '@watslog/shared';
 export declare class ApiClient {
     static signUp(dto: SignUpDTO): Promise<AuthSessionResponse>;
     static signIn(dto: SignInDTO): Promise<AuthSessionResponse>;
@@ -20,7 +20,9 @@ export declare class ApiClient {
         avatarUrl?: string;
         role?: string;
     }): Promise<any>;
-    static getEvents(petId: string, limit?: number): Promise<PetEvent[]>;
+    static getEvents(petId: string, options?: number | GetEventsQuery): Promise<PetEvent[]>;
+    static syncEvents(petId: string, onProgress?: (count: number) => void): Promise<PetEvent[]>;
+    static backfillOlderEvents(petId: string, beforeIso: string, onProgress?: (count: number) => void): Promise<void>;
     static createEvent(dto: CreateEventDTO): Promise<PetEvent>;
     static flushOfflineQueue(): Promise<number>;
     static importEvents(events: Omit<PetEvent, 'id' | 'createdAt'>[]): Promise<{
@@ -29,7 +31,10 @@ export declare class ApiClient {
     static importDogNotes(householdId: string, petId: string, items: DogNotesImportItem[]): Promise<{
         importedCount: number;
     }>;
-    static getAnalytics(petId: string): Promise<PetAnalytics>;
+    static getAnalytics(petId: string, options?: {
+        startDate?: string;
+        endDate?: string;
+    }): Promise<PetAnalytics>;
     static saveWalkRoute(walk: Partial<WalkRoute>): Promise<WalkRoute>;
     static getWalkRoutes(petId: string): Promise<WalkRoute[]>;
 }

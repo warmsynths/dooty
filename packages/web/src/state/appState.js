@@ -1,6 +1,6 @@
 import { translations, } from '@watslog/shared';
 import { ApiClient } from '../api/client.js';
-import { getPendingEvents } from '../db/offlineStore.js';
+import { getPendingEvents, getEventsOffline } from '../db/offlineStore.js';
 class AppStateManager {
     constructor() {
         this.listeners = new Set();
@@ -15,6 +15,8 @@ class AppStateManager {
         this.currentLocale = 'en';
         this.isOnline = navigator.onLine;
         this.pendingSyncCount = 0;
+        this.isSyncing = false;
+        this.analyticsTimeRange = '30d';
         // User profile
         this.userAvatar = localStorage.getItem('dooty_user_avatar') || '';
         // Tracking preferences
@@ -75,6 +77,11 @@ class AppStateManager {
                 console.warn('Failed to parse nudge prefs:', e);
             }
         }
+        // Load analytics timeframe preference
+        const storedRange = localStorage.getItem('dooty_analytics_timerange');
+        if (storedRange && ['7d', '30d', '1y', 'all'].includes(storedRange)) {
+            this.analyticsTimeRange = storedRange;
+        }
         // Restore cached household session immediately so hot reload never flashes auth screen
         const cachedHousehold = localStorage.getItem('dooty_household_data');
         if (cachedHousehold) {
@@ -85,6 +92,13 @@ class AppStateManager {
                 if (this.pets.length > 0) {
                     const storedPetId = localStorage.getItem('dooty_pet_id');
                     this.currentPet = this.pets.find((p) => p.id === storedPetId) || this.pets[0];
+                    // Eagerly populate cached offline events on boot
+                    getEventsOffline(this.currentPet.id).then((cachedEvents) => {
+                        if (cachedEvents.length > 0 && this.events.length === 0) {
+                            this.events = cachedEvents;
+                            this.notify();
+                        }
+                    });
                 }
                 this.loadPendingInvites();
             }
@@ -127,6 +141,11 @@ class AppStateManager {
     setNudgePreference(key, value) {
         this.nudges = { ...this.nudges, [key]: value };
         localStorage.setItem('dooty_nudge_prefs', JSON.stringify(this.nudges));
+        this.notify();
+    }
+    setAnalyticsTimeRange(range) {
+        this.analyticsTimeRange = range;
+        localStorage.setItem('dooty_analytics_timerange', range);
         this.notify();
     }
     openLogger(eventType) {
@@ -361,10 +380,12 @@ class AppStateManager {
             this.notify();
         }
     }
-    selectPet(pet) {
+    async selectPet(pet) {
         this.currentPet = pet;
         localStorage.setItem('dooty_pet_id', pet.id);
-        this.refreshEvents();
+        this.events = await getEventsOffline(pet.id);
+        this.notify();
+        this.syncEvents();
     }
     async selectHousehold(householdId) {
         const target = this.userHouseholds.find((h) => h.id === householdId);
@@ -378,7 +399,8 @@ class AppStateManager {
         if (rawPets.length > 0) {
             this.currentPet = rawPets[0];
             localStorage.setItem('dooty_pet_id', this.currentPet.id);
-            await this.refreshEvents();
+            this.events = await getEventsOffline(this.currentPet.id);
+            this.syncEvents();
         }
         else {
             this.currentPet = null;
@@ -393,12 +415,36 @@ class AppStateManager {
             this.notify();
             return;
         }
+        // Instant display from local storage
+        this.events = await getEventsOffline(this.currentPet.id);
+        this.notify();
+        // Delta sync in background
+        await this.syncEvents();
+    }
+    async syncEvents() {
+        if (!this.currentPet)
+            return;
+        const targetPetId = this.currentPet.id;
+        this.isSyncing = true;
+        this.notify();
         try {
-            this.events = await ApiClient.getEvents(this.currentPet.id);
-            this.notify();
+            const updated = await ApiClient.syncEvents(targetPetId, async () => {
+                if (this.currentPet?.id === targetPetId) {
+                    this.events = await getEventsOffline(targetPetId);
+                    this.notify();
+                }
+            });
+            if (this.currentPet?.id === targetPetId) {
+                this.events = updated;
+                this.notify();
+            }
         }
         catch (err) {
-            console.warn('Could not refresh events:', err);
+            console.warn('Sync events warning:', err);
+        }
+        finally {
+            this.isSyncing = false;
+            this.notify();
         }
     }
     async logEvent(eventType, notes = '', metadata, lat, lng) {

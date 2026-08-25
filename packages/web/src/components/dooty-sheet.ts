@@ -81,7 +81,7 @@ export class DootySheet extends LitElement {
       border-bottom: none;
       border-radius: 30px 30px 0 0;
       width: 100%;
-      max-width: 440px;
+      max-width: 480px;
       max-height: 92%;
       display: flex;
       flex-direction: column;

@@ -10,6 +10,7 @@ import {
   SignUpDTO,
   SignInDTO,
   AuthSessionResponse,
+  GetEventsQuery,
 } from '@watslog/shared';
 import {
   enqueuePendingEvent,
@@ -17,6 +18,8 @@ import {
   removePendingEvent,
   saveEventsOffline,
   getEventsOffline,
+  getLastSyncTimestamp,
+  setLastSyncTimestamp,
 } from '../db/offlineStore.js';
 
 const DEFAULT_BFF_URL = 'https://watslog-bff.warmsynthsiloveyou.workers.dev/api';
@@ -192,12 +195,21 @@ export class ApiClient {
     return res.json();
   }
 
-  static async getEvents(petId: string, limit?: number): Promise<PetEvent[]> {
+  static async getEvents(petId: string, options?: number | GetEventsQuery): Promise<PetEvent[]> {
     if (!navigator.onLine) {
       return getEventsOffline(petId);
     }
     try {
-      const url = limit ? `${API_BASE}/pets/${petId}/events?limit=${limit}` : `${API_BASE}/pets/${petId}/events`;
+      const opts: GetEventsQuery = typeof options === 'number' ? { limit: options } : options || {};
+      const params = new URLSearchParams();
+      if (opts.limit) params.set('limit', opts.limit.toString());
+      if (opts.offset) params.set('offset', opts.offset.toString());
+      if (opts.since) params.set('since', opts.since);
+      if (opts.startDate) params.set('startDate', opts.startDate);
+      if (opts.endDate) params.set('endDate', opts.endDate);
+
+      const qs = params.toString();
+      const url = qs ? `${API_BASE}/pets/${petId}/events?${qs}` : `${API_BASE}/pets/${petId}/events`;
       const res = await fetch(url, {
         headers: getAuthHeaders(),
       });
@@ -207,6 +219,90 @@ export class ApiClient {
       return events;
     } catch {
       return getEventsOffline(petId);
+    }
+  }
+
+  static async syncEvents(
+    petId: string,
+    onProgress?: (count: number) => void
+  ): Promise<PetEvent[]> {
+    if (!navigator.onLine) {
+      return getEventsOffline(petId);
+    }
+
+    try {
+      const lastSync = await getLastSyncTimestamp(petId);
+      const syncStartTime = new Date().toISOString();
+
+      if (lastSync) {
+        // Delta sync: fetch only new/modified events since last sync
+        const deltaEvents = await this.getEvents(petId, { since: lastSync, limit: 1000 });
+        if (deltaEvents && deltaEvents.length > 0) {
+          await saveEventsOffline(deltaEvents);
+        }
+        await setLastSyncTimestamp(petId, syncStartTime);
+        return getEventsOffline(petId);
+      } else {
+        // Cold sync: fetch recent 90 days first for immediate interaction
+        const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000).toISOString();
+        const recentEvents = await this.getEvents(petId, { startDate: ninetyDaysAgo, limit: 500 });
+        if (recentEvents && recentEvents.length > 0) {
+          await saveEventsOffline(recentEvents);
+          onProgress?.(recentEvents.length);
+        }
+        await setLastSyncTimestamp(petId, syncStartTime);
+
+        // Asynchronously backfill older history in the background
+        this.backfillOlderEvents(petId, ninetyDaysAgo, onProgress).catch((err) => {
+          console.warn('Background historical backfill error:', err);
+        });
+
+        return getEventsOffline(petId);
+      }
+    } catch (err) {
+      console.warn('Sync failed, using offline fallback:', err);
+      return getEventsOffline(petId);
+    }
+  }
+
+  static async backfillOlderEvents(
+    petId: string,
+    beforeIso: string,
+    onProgress?: (count: number) => void
+  ): Promise<void> {
+    if (!navigator.onLine) return;
+    try {
+      let currentBefore = beforeIso;
+      let hasMore = true;
+      const batchSize = 500;
+
+      while (hasMore) {
+        const chunk = await this.getEvents(petId, {
+          endDate: currentBefore,
+          limit: batchSize,
+        });
+
+        if (!chunk || chunk.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        await saveEventsOffline(chunk);
+        onProgress?.(chunk.length);
+
+        if (chunk.length < batchSize) {
+          hasMore = false;
+        } else {
+          const earliest = chunk[chunk.length - 1];
+          if (earliest && earliest.timestamp && earliest.timestamp !== currentBefore) {
+            currentBefore = earliest.timestamp;
+          } else {
+            hasMore = false;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Backfill chunk failed:', err);
     }
   }
 
@@ -333,8 +429,17 @@ export class ApiClient {
     return res.json();
   }
 
-  static async getAnalytics(petId: string): Promise<PetAnalytics> {
-    const res = await fetch(`${API_BASE}/pets/${petId}/analytics`, {
+  static async getAnalytics(
+    petId: string,
+    options?: { startDate?: string; endDate?: string }
+  ): Promise<PetAnalytics> {
+    const params = new URLSearchParams();
+    if (options?.startDate) params.set('startDate', options.startDate);
+    if (options?.endDate) params.set('endDate', options.endDate);
+    const qs = params.toString();
+    const url = qs ? `${API_BASE}/pets/${petId}/analytics?${qs}` : `${API_BASE}/pets/${petId}/analytics`;
+
+    const res = await fetch(url, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch analytics');
@@ -359,3 +464,4 @@ export class ApiClient {
     return res.json();
   }
 }
+

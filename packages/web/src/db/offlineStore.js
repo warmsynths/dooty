@@ -35,15 +35,67 @@ export async function saveEventsOffline(events) {
         console.warn('Could not save events offline:', err);
     }
 }
-export async function getEventsOffline(petId) {
+export async function getEventsOffline(petId, options) {
     try {
         const db = await getOfflineDB();
-        const all = await db.getAllFromIndex('events', 'by-pet', petId);
-        return all.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        let all = await db.getAllFromIndex('events', 'by-pet', petId);
+        if (options?.startDate) {
+            const startMs = new Date(options.startDate).getTime();
+            all = all.filter((e) => new Date(e.timestamp).getTime() >= startMs);
+        }
+        if (options?.endDate) {
+            const endMs = new Date(options.endDate).getTime();
+            all = all.filter((e) => new Date(e.timestamp).getTime() <= endMs);
+        }
+        all.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        if (options?.limit && options.limit > 0) {
+            return all.slice(0, options.limit);
+        }
+        return all;
     }
     catch (err) {
         console.warn('Could not retrieve offline events:', err);
         return [];
+    }
+}
+export async function getLastSyncTimestamp(petId) {
+    try {
+        const db = await getOfflineDB();
+        const val = await db.get('meta', `last_sync_${petId}`);
+        return val || null;
+    }
+    catch {
+        return null;
+    }
+}
+export async function setLastSyncTimestamp(petId, timestamp) {
+    try {
+        const db = await getOfflineDB();
+        await db.put('meta', timestamp, `last_sync_${petId}`);
+    }
+    catch (err) {
+        console.warn('Failed to set last sync timestamp:', err);
+    }
+}
+export async function clearOfflineEvents(petId) {
+    try {
+        const db = await getOfflineDB();
+        if (!petId) {
+            await db.clear('events');
+            await db.clear('meta');
+        }
+        else {
+            const all = await db.getAllFromIndex('events', 'by-pet', petId);
+            const tx = db.transaction('events', 'readwrite');
+            for (const e of all) {
+                await tx.store.delete(e.id);
+            }
+            await tx.done;
+            await db.delete('meta', `last_sync_${petId}`);
+        }
+    }
+    catch (err) {
+        console.warn('Failed to clear offline events:', err);
     }
 }
 export async function enqueuePendingEvent(dto) {

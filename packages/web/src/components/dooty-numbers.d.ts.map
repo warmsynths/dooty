@@ -1,1 +1,1 @@
-{"version":3,"file":"dooty-numbers.d.ts","sourceRoot":"","sources":["dooty-numbers.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAa,MAAM,KAAK,CAAC;AAI5C,qBACa,YAAa,SAAQ,UAAU;IACjC,OAAO,CAAC,WAAW,CAAC,CAAa;IAE1C,MAAM,CAAC,MAAM,0BA2TX;IAEF,iBAAiB;IAKjB,oBAAoB;IAKpB,MAAM;CA0YP"}
+{"version":3,"file":"dooty-numbers.d.ts","sourceRoot":"","sources":["dooty-numbers.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAa,MAAM,KAAK,CAAC;AAI5C,qBACa,YAAa,SAAQ,UAAU;IACjC,OAAO,CAAC,WAAW,CAAC,CAAa;IAE1C,MAAM,CAAC,MAAM,0BA8VX;IAEF,iBAAiB;IAKjB,oBAAoB;IAKpB,MAAM;CAggBP"}

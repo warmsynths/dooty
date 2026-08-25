@@ -368,8 +368,21 @@ app.get('/api/pets/:petId/events', async (c) => {
     }
 
     const limitQuery = c.req.query('limit');
+    const offsetQuery = c.req.query('offset');
+    const since = c.req.query('since');
+    const startDate = c.req.query('startDate');
+    const endDate = c.req.query('endDate');
+
     const limit = limitQuery ? Number(limitQuery) : undefined;
-    const events = await service.getEvents(petId, limit);
+    const offset = offsetQuery ? Number(offsetQuery) : undefined;
+
+    const events = await service.getEvents(petId, {
+      limit,
+      offset,
+      since,
+      startDate,
+      endDate,
+    });
     return c.json(events || []);
   } catch (err: any) {
     return c.json({ error: err.message || 'Failed to fetch events' }, 500);
@@ -524,7 +537,9 @@ app.get('/api/pets/:petId/analytics', async (c) => {
       return c.json({ error: 'Forbidden' }, 403);
     }
 
-    const analytics = await service.getAnalytics(petId);
+    const startDate = c.req.query('startDate');
+    const endDate = c.req.query('endDate');
+    const analytics = await service.getAnalytics(petId, { startDate, endDate });
     return c.json(analytics);
   } catch (err: any) {
     return c.json({ error: err.message || 'Failed to get analytics' }, 500);

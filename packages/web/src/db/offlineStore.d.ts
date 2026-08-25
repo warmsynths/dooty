@@ -24,7 +24,14 @@ interface WatslogDBSchema extends DBSchema {
 }
 export declare function getOfflineDB(): Promise<IDBPDatabase<WatslogDBSchema>>;
 export declare function saveEventsOffline(events: PetEvent[]): Promise<void>;
-export declare function getEventsOffline(petId: string): Promise<PetEvent[]>;
+export declare function getEventsOffline(petId: string, options?: {
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+}): Promise<PetEvent[]>;
+export declare function getLastSyncTimestamp(petId: string): Promise<string | null>;
+export declare function setLastSyncTimestamp(petId: string, timestamp: string): Promise<void>;
+export declare function clearOfflineEvents(petId?: string): Promise<void>;
 export declare function enqueuePendingEvent(dto: CreateEventDTO): Promise<string>;
 export declare function getPendingEvents(): Promise<{
     localId: string;

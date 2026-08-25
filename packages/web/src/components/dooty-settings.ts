@@ -547,6 +547,37 @@ export class DootySettings extends LitElement {
           </div>
         </div>
 
+        <!-- Analytics Timeframe Preference -->
+        <div>
+          <div class="section-label">${isKo ? '기본 분석 기간' : 'Default Analytics Range'}</div>
+          <div class="lang-row">
+            <div
+              class="lang-btn ${appState.analyticsTimeRange === '7d' ? 'active' : ''}"
+              @click=${() => appState.setAnalyticsTimeRange('7d')}
+            >
+              7D
+            </div>
+            <div
+              class="lang-btn ${appState.analyticsTimeRange === '30d' ? 'active' : ''}"
+              @click=${() => appState.setAnalyticsTimeRange('30d')}
+            >
+              30D
+            </div>
+            <div
+              class="lang-btn ${appState.analyticsTimeRange === '1y' ? 'active' : ''}"
+              @click=${() => appState.setAnalyticsTimeRange('1y')}
+            >
+              1Y
+            </div>
+            <div
+              class="lang-btn ${appState.analyticsTimeRange === 'all' ? 'active' : ''}"
+              @click=${() => appState.setAnalyticsTimeRange('all')}
+            >
+              ${isKo ? '전체' : 'ALL'}
+            </div>
+          </div>
+        </div>
+
         <!-- Household Banner Card -->
         <div class="household-card">
           <div class="house-icon-badge">

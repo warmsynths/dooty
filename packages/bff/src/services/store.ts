@@ -15,6 +15,7 @@ import {
   SignUpDTO,
   SignInDTO,
   AuthSessionResponse,
+  GetEventsQuery,
 } from '@watslog/shared';
 import { getSupabaseClient, Bindings } from './supabase.js';
 
@@ -1050,17 +1051,42 @@ export class DataService {
   }
 
   // --- EVENTS ---
-  async getEvents(petId: string, limit?: number): Promise<PetEvent[]> {
-    const safeLimit = Math.min(Math.max(limit || 100, 1), 500);
+  async getEvents(
+    petId: string,
+    limitOrOptions?: number | GetEventsQuery
+  ): Promise<PetEvent[]> {
+    const opts: GetEventsQuery =
+      typeof limitOrOptions === 'number'
+        ? { limit: limitOrOptions }
+        : limitOrOptions || {};
+
+    const maxAllowed = opts.since ? 1000 : 500;
+    const safeLimit = Math.min(Math.max(opts.limit || (opts.since ? 1000 : 100), 1), maxAllowed);
     const supabase = getSupabaseClient(this.env);
+
     if (supabase && isUuid(petId)) {
       try {
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .eq('pet_id', petId)
-          .order('timestamp', { ascending: false })
-          .limit(safeLimit);
+        let query = supabase.from('events').select('*').eq('pet_id', petId);
+
+        if (opts.since) {
+          query = query.or(`created_at.gt.${opts.since},timestamp.gt.${opts.since}`);
+        }
+        if (opts.startDate) {
+          query = query.gte('timestamp', opts.startDate);
+        }
+        if (opts.endDate) {
+          query = query.lte('timestamp', opts.endDate);
+        }
+
+        query = query.order('timestamp', { ascending: false });
+
+        if (opts.offset !== undefined && opts.offset > 0) {
+          query = query.range(opts.offset, opts.offset + safeLimit - 1);
+        } else {
+          query = query.limit(safeLimit);
+        }
+
+        const { data, error } = await query;
         if (!error && data) {
           return data.map((e: any) => ({
             id: e.id,
@@ -1082,10 +1108,25 @@ export class DataService {
       }
     }
 
-    const memFiltered = memEvents
-      .filter((e) => e.petId === petId)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    return memFiltered.slice(0, safeLimit);
+    let memFiltered = memEvents.filter((e) => e.petId === petId);
+    if (opts.since) {
+      const sinceTime = new Date(opts.since).getTime();
+      memFiltered = memFiltered.filter(
+        (e) => new Date(e.createdAt || e.timestamp).getTime() > sinceTime
+      );
+    }
+    if (opts.startDate) {
+      const startTime = new Date(opts.startDate).getTime();
+      memFiltered = memFiltered.filter((e) => new Date(e.timestamp).getTime() >= startTime);
+    }
+    if (opts.endDate) {
+      const endTime = new Date(opts.endDate).getTime();
+      memFiltered = memFiltered.filter((e) => new Date(e.timestamp).getTime() <= endTime);
+    }
+
+    memFiltered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const offset = opts.offset || 0;
+    return memFiltered.slice(offset, offset + safeLimit);
   }
 
   async createEvent(dto: CreateEventDTO): Promise<PetEvent> {
@@ -1261,8 +1302,15 @@ export class DataService {
   }
 
   // --- ANALYTICS ---
-  async getAnalytics(petId: string): Promise<PetAnalytics> {
-    const events = await this.getEvents(petId);
+  async getAnalytics(
+    petId: string,
+    options?: { startDate?: string; endDate?: string }
+  ): Promise<PetAnalytics> {
+    const events = await this.getEvents(petId, {
+      limit: 1000,
+      startDate: options?.startDate,
+      endDate: options?.endDate,
+    });
     return calculatePetAnalytics(events, petId);
   }
 

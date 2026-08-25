@@ -10,9 +10,10 @@ import {
   SignInDTO,
   AuthSessionResponse,
   HouseholdInvite,
+  TimeRangeFilter,
 } from '@watslog/shared';
 import { ApiClient } from '../api/client.js';
-import { getPendingEvents } from '../db/offlineStore.js';
+import { getPendingEvents, getEventsOffline } from '../db/offlineStore.js';
 
 type Listener = () => void;
 
@@ -39,6 +40,8 @@ class AppStateManager {
 
   isOnline: boolean = navigator.onLine;
   pendingSyncCount: number = 0;
+  isSyncing: boolean = false;
+  analyticsTimeRange: TimeRangeFilter = '30d';
 
   // User profile
   userAvatar: string = localStorage.getItem('dooty_user_avatar') || '';
@@ -106,6 +109,12 @@ class AppStateManager {
       }
     }
 
+    // Load analytics timeframe preference
+    const storedRange = localStorage.getItem('dooty_analytics_timerange') as TimeRangeFilter;
+    if (storedRange && ['7d', '30d', '1y', 'all'].includes(storedRange)) {
+      this.analyticsTimeRange = storedRange;
+    }
+
     // Restore cached household session immediately so hot reload never flashes auth screen
     const cachedHousehold = localStorage.getItem('dooty_household_data');
     if (cachedHousehold) {
@@ -116,6 +125,13 @@ class AppStateManager {
         if (this.pets.length > 0) {
           const storedPetId = localStorage.getItem('dooty_pet_id');
           this.currentPet = this.pets.find((p: any) => p.id === storedPetId) || this.pets[0];
+          // Eagerly populate cached offline events on boot
+          getEventsOffline(this.currentPet.id).then((cachedEvents) => {
+            if (cachedEvents.length > 0 && this.events.length === 0) {
+              this.events = cachedEvents;
+              this.notify();
+            }
+          });
         }
         this.loadPendingInvites();
       } catch (e) {
@@ -166,6 +182,12 @@ class AppStateManager {
   setNudgePreference(key: string, value: boolean) {
     this.nudges = { ...this.nudges, [key]: value };
     localStorage.setItem('dooty_nudge_prefs', JSON.stringify(this.nudges));
+    this.notify();
+  }
+
+  setAnalyticsTimeRange(range: TimeRangeFilter) {
+    this.analyticsTimeRange = range;
+    localStorage.setItem('dooty_analytics_timerange', range);
     this.notify();
   }
 
@@ -416,10 +438,12 @@ class AppStateManager {
     }
   }
 
-  selectPet(pet: Pet) {
+  async selectPet(pet: Pet) {
     this.currentPet = pet;
     localStorage.setItem('dooty_pet_id', pet.id);
-    this.refreshEvents();
+    this.events = await getEventsOffline(pet.id);
+    this.notify();
+    this.syncEvents();
   }
 
   async selectHousehold(householdId: string) {
@@ -433,7 +457,8 @@ class AppStateManager {
     if (rawPets.length > 0) {
       this.currentPet = rawPets[0];
       localStorage.setItem('dooty_pet_id', this.currentPet.id);
-      await this.refreshEvents();
+      this.events = await getEventsOffline(this.currentPet.id);
+      this.syncEvents();
     } else {
       this.currentPet = null;
       this.events = [];
@@ -448,11 +473,35 @@ class AppStateManager {
       this.notify();
       return;
     }
+    // Instant display from local storage
+    this.events = await getEventsOffline(this.currentPet.id);
+    this.notify();
+    // Delta sync in background
+    await this.syncEvents();
+  }
+
+  async syncEvents() {
+    if (!this.currentPet) return;
+    const targetPetId = this.currentPet.id;
+    this.isSyncing = true;
+    this.notify();
+
     try {
-      this.events = await ApiClient.getEvents(this.currentPet.id);
-      this.notify();
+      const updated = await ApiClient.syncEvents(targetPetId, async () => {
+        if (this.currentPet?.id === targetPetId) {
+          this.events = await getEventsOffline(targetPetId);
+          this.notify();
+        }
+      });
+      if (this.currentPet?.id === targetPetId) {
+        this.events = updated;
+        this.notify();
+      }
     } catch (err) {
-      console.warn('Could not refresh events:', err);
+      console.warn('Sync events warning:', err);
+    } finally {
+      this.isSyncing = false;
+      this.notify();
     }
   }
 

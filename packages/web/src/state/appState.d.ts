@@ -1,4 +1,4 @@
-import { Household, Pet, PetEvent, SupportedLocale, EventType, AuthUser, SignUpDTO, SignInDTO } from '@watslog/shared';
+import { Household, Pet, PetEvent, SupportedLocale, EventType, AuthUser, SignUpDTO, SignInDTO, TimeRangeFilter } from '@watslog/shared';
 type Listener = () => void;
 export interface PendingInviteItem {
     code: string;
@@ -19,6 +19,8 @@ declare class AppStateManager {
     currentLocale: SupportedLocale;
     isOnline: boolean;
     pendingSyncCount: number;
+    isSyncing: boolean;
+    analyticsTimeRange: TimeRangeFilter;
     userAvatar: string;
     track: Record<string, boolean>;
     nudges: Record<string, boolean>;
@@ -40,6 +42,7 @@ declare class AppStateManager {
     setAuthView(view: 'signin' | 'signup' | 'dogsetup' | 'join' | 'joindetails'): void;
     setTrackingPreference(key: string, value: boolean): void;
     setNudgePreference(key: string, value: boolean): void;
+    setAnalyticsTimeRange(range: TimeRangeFilter): void;
     openLogger(eventType?: EventType | null): void;
     closeLogger(): void;
     openPhotoModal(opts: {
@@ -57,9 +60,10 @@ declare class AppStateManager {
     revokeInvite(code: string): Promise<void>;
     exportEventsCsv(): void;
     init(): Promise<void>;
-    selectPet(pet: Pet): void;
+    selectPet(pet: Pet): Promise<void>;
     selectHousehold(householdId: string): Promise<void>;
     refreshEvents(): Promise<void>;
+    syncEvents(): Promise<void>;
     logEvent(eventType: EventType, notes?: string, metadata?: Record<string, any>, lat?: number, lng?: number): Promise<void>;
     handleNetworkChange(isOnline: boolean): Promise<void>;
     get isAuthenticated(): boolean;

@@ -638,6 +638,22 @@ export class DootyAuth extends LitElement {
       line-height: 1.4;
       margin-bottom: 4px;
     }
+
+    .btn-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2.5px solid #17140F;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   `;
 
   connectedCallback() {
@@ -895,7 +911,9 @@ export class DootyAuth extends LitElement {
               class="btn-coral"
               ?disabled=${this.isSubmitting}
             >
-              ${this.isSubmitting ? tAuth.loggingIn : tAuth.logInBtn}
+              ${this.isSubmitting
+                ? html`<span class="btn-spinner"></span> ${appState.currentLocale === 'ko' ? '로그인 중...' : 'Logging in...'}`
+                : tAuth.logInBtn}
             </button>
 
             <div
@@ -1148,7 +1166,9 @@ export class DootyAuth extends LitElement {
               class="btn-green"
               ?disabled=${this.isSubmitting}
             >
-              ${this.isSubmitting ? tAuth.signingUp : step2.startTracking}
+              ${this.isSubmitting
+                ? html`<span class="btn-spinner"></span> ${appState.currentLocale === 'ko' ? '설정 중...' : 'Setting up...'}`
+                : step2.startTracking}
             </button>
           </form>
 
@@ -1351,7 +1371,9 @@ export class DootyAuth extends LitElement {
               class="btn-coral"
               ?disabled=${this.isSubmitting}
             >
-              ${this.isSubmitting ? tAuth.signingUp : join2.joinHouseholdBtn}
+              ${this.isSubmitting
+                ? html`<span class="btn-spinner"></span> ${appState.currentLocale === 'ko' ? '가입 중...' : 'Joining...'}`
+                : join2.joinHouseholdBtn}
             </button>
           </form>
 
