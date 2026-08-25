@@ -186,7 +186,7 @@ app.delete('/api/households/:id/members/:memberId', async (c) => {
 
     const callerRole = await service.getMemberRole(user.id, id);
     const household = await service.getHousehold(id);
-    const targetMember = household?.members?.find((m) => m.id === memberId);
+    const targetMember = household?.members?.find((m: any) => m.id === memberId);
 
     const isSelf = targetMember && targetMember.userId === user.id;
     if (!isSelf && callerRole !== 'owner' && callerRole !== 'admin') {
@@ -325,7 +325,7 @@ app.patch('/api/households/:id/members/:memberId', async (c) => {
 
     const callerRole = await service.getMemberRole(user.id, householdId);
     const household = await service.getHousehold(householdId);
-    const targetMember = household?.members?.find((m) => m.id === memberId);
+    const targetMember = household?.members?.find((m: any) => m.id === memberId);
 
     const body = await c.req.json();
     // If updating role, must be household owner
@@ -358,11 +358,13 @@ app.get('/api/pets/:petId/events', async (c) => {
     }
 
     const pet = await service.getPet(petId);
-    if (pet) {
-      const isMember = await service.isHouseholdMember(user.id, pet.householdId);
-      if (!isMember) {
-        return c.json({ error: 'Forbidden' }, 403);
-      }
+    if (!pet) {
+      return c.json({ error: 'Pet not found' }, 404);
+    }
+
+    const isMember = await service.isHouseholdMember(user.id, pet.householdId);
+    if (!isMember) {
+      return c.json({ error: 'Forbidden' }, 403);
     }
 
     const limitQuery = c.req.query('limit');
@@ -370,7 +372,7 @@ app.get('/api/pets/:petId/events', async (c) => {
     const events = await service.getEvents(petId, limit);
     return c.json(events || []);
   } catch (err: any) {
-    return c.json([]);
+    return c.json({ error: err.message || 'Failed to fetch events' }, 500);
   }
 });
 
@@ -513,11 +515,13 @@ app.get('/api/pets/:petId/analytics', async (c) => {
     }
 
     const pet = await service.getPet(petId);
-    if (pet) {
-      const isMember = await service.isHouseholdMember(user.id, pet.householdId);
-      if (!isMember) {
-        return c.json({ error: 'Forbidden' }, 403);
-      }
+    if (!pet) {
+      return c.json({ error: 'Pet not found' }, 404);
+    }
+
+    const isMember = await service.isHouseholdMember(user.id, pet.householdId);
+    if (!isMember) {
+      return c.json({ error: 'Forbidden' }, 403);
     }
 
     const analytics = await service.getAnalytics(petId);
@@ -537,14 +541,24 @@ app.post('/api/walks', async (c) => {
     }
 
     const body = await c.req.json();
-    if (body.householdId) {
-      const isMember = await service.isHouseholdMember(user.id, body.householdId);
-      if (!isMember) {
-        return c.json({ error: 'Forbidden' }, 403);
+    let targetHouseholdId = body.householdId;
+    if (!targetHouseholdId && body.petId) {
+      const pet = await service.getPet(body.petId);
+      if (pet) {
+        targetHouseholdId = pet.householdId;
       }
     }
 
-    const walk = await service.saveWalkRoute(body);
+    if (!targetHouseholdId) {
+      return c.json({ error: 'householdId or valid petId is required' }, 400);
+    }
+
+    const isMember = await service.isHouseholdMember(user.id, targetHouseholdId);
+    if (!isMember) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
+
+    const walk = await service.saveWalkRoute({ ...body, householdId: targetHouseholdId });
     return c.json(walk, 201);
   } catch (err: any) {
     return c.json({ error: err.message || 'Failed to save walk' }, 500);
@@ -561,17 +575,19 @@ app.get('/api/pets/:petId/walks', async (c) => {
     }
 
     const pet = await service.getPet(petId);
-    if (pet) {
-      const isMember = await service.isHouseholdMember(user.id, pet.householdId);
-      if (!isMember) {
-        return c.json({ error: 'Forbidden' }, 403);
-      }
+    if (!pet) {
+      return c.json({ error: 'Pet not found' }, 404);
+    }
+
+    const isMember = await service.isHouseholdMember(user.id, pet.householdId);
+    if (!isMember) {
+      return c.json({ error: 'Forbidden' }, 403);
     }
 
     const walks = await service.getWalkRoutes(petId);
     return c.json(walks || []);
   } catch (err: any) {
-    return c.json([]);
+    return c.json({ error: err.message || 'Failed to fetch walk routes' }, 500);
   }
 });
 

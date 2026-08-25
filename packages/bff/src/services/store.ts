@@ -1041,7 +1041,7 @@ export class DataService {
       }
     }
 
-    const member = memMembers.find((m) => m.id === memberId || m.householdId === householdId);
+    const member = memMembers.find((m) => m.id === memberId && m.householdId === householdId);
     if (!member) return null;
     if (memberData.displayName !== undefined) member.displayName = memberData.displayName;
     if (memberData.avatarUrl !== undefined) member.avatarUrl = memberData.avatarUrl;

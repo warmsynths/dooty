@@ -19,7 +19,23 @@ import {
   getEventsOffline,
 } from '../db/offlineStore.js';
 
-const API_BASE = '/api';
+const DEFAULT_BFF_URL = 'https://watslog-bff.warmsynthsiloveyou.workers.dev/api';
+
+function getApiBase(): string {
+  const envUrl = (import.meta as any).env?.VITE_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname.endsWith('github.io') || (!hostname.includes('localhost') && !hostname.includes('127.0.0.1'))) {
+      return DEFAULT_BFF_URL;
+    }
+  }
+  return '/api';
+}
+
+const API_BASE = getApiBase();
 
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };

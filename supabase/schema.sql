@@ -115,8 +115,24 @@ CREATE POLICY "Users can create households" ON public.households
 CREATE POLICY "Members can view fellow household members" ON public.household_members
     FOR SELECT USING (public.is_household_member(household_id));
 
-CREATE POLICY "Members can manage household members" ON public.household_members
-    FOR ALL USING (public.is_household_member(household_id));
+CREATE POLICY "Users can add themselves or members can add members" ON public.household_members
+    FOR INSERT WITH CHECK (user_id = auth.uid() OR public.is_household_member(household_id));
+
+CREATE POLICY "Members can update household members" ON public.household_members
+    FOR UPDATE USING (public.is_household_member(household_id));
+
+CREATE POLICY "Members can delete household members" ON public.household_members
+    FOR DELETE USING (public.is_household_member(household_id));
+
+-- Policies for household_invites
+CREATE POLICY "Members can view household invites" ON public.household_invites
+    FOR SELECT USING (public.is_household_member(household_id));
+
+CREATE POLICY "Members can create household invites" ON public.household_invites
+    FOR INSERT WITH CHECK (public.is_household_member(household_id));
+
+CREATE POLICY "Members can delete household invites" ON public.household_invites
+    FOR DELETE USING (public.is_household_member(household_id));
 
 -- Policies for pets
 CREATE POLICY "Members can view household pets" ON public.pets

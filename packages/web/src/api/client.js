@@ -1,5 +1,19 @@
 import { enqueuePendingEvent, getPendingEvents, removePendingEvent, saveEventsOffline, getEventsOffline, } from '../db/offlineStore.js';
-const API_BASE = '/api';
+const DEFAULT_BFF_URL = 'https://watslog-bff.warmsynthsiloveyou.workers.dev/api';
+function getApiBase() {
+    const envUrl = import.meta.env?.VITE_API_URL;
+    if (envUrl) {
+        return envUrl.replace(/\/+$/, '');
+    }
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        if (hostname.endsWith('github.io') || (!hostname.includes('localhost') && !hostname.includes('127.0.0.1'))) {
+            return DEFAULT_BFF_URL;
+        }
+    }
+    return '/api';
+}
+const API_BASE = getApiBase();
 function getAuthHeaders() {
     const headers = { 'Content-Type': 'application/json' };
     const token = localStorage.getItem('dooty_auth_token');
