@@ -187,10 +187,23 @@ app.delete('/api/households/:id/members/:memberId', async (c) => {
     const callerRole = await service.getMemberRole(user.id, id);
     const household = await service.getHousehold(id);
     const targetMember = household?.members?.find((m: any) => m.id === memberId);
+    if (!targetMember) {
+      return c.json({ error: 'Member not found' }, 404);
+    }
 
     const isSelf = targetMember && targetMember.userId === user.id;
-    if (!isSelf && callerRole !== 'owner' && callerRole !== 'admin') {
-      return c.json({ error: 'Forbidden: Only owners and admins can remove other members' }, 403);
+    if (!isSelf) {
+      if (callerRole !== 'owner' && callerRole !== 'admin') {
+        return c.json({ error: 'Forbidden: Only owners and admins can remove other members' }, 403);
+      }
+      // Hierarchy check: Admins cannot remove owners or other admins
+      if (callerRole === 'admin' && (targetMember.role === 'owner' || targetMember.role === 'admin')) {
+        return c.json({ error: 'Forbidden: Admins cannot remove owners or other admins' }, 403);
+      }
+      // Owners cannot be removed by others unless they leave themselves
+      if (targetMember.role === 'owner' && callerRole !== 'owner') {
+        return c.json({ error: 'Forbidden: Cannot remove household owner' }, 403);
+      }
     }
 
     const success = await service.removeMember(id, memberId);
@@ -228,10 +241,12 @@ app.post('/api/households/join', async (c) => {
     const body = await c.req.json<{ code: string; displayName: string; role?: any }>();
     if (!body.code) return c.json({ error: 'Invite code required' }, 400);
 
+    const user = await getAuthUser(c);
     const household = await service.joinHouseholdByCode(
       body.code,
       body.displayName || 'Member',
-      'member'
+      'member',
+      user?.id
     );
     if (!household) return c.json({ error: 'Invalid or expired invite code' }, 400);
     return c.json(household);
@@ -407,6 +422,11 @@ app.post('/api/events', async (c) => {
       return c.json({ error: 'Forbidden: You are not a member of this household' }, 403);
     }
 
+    const pet = await service.getPet(body.petId);
+    if (!pet || pet.householdId !== body.householdId) {
+      return c.json({ error: 'Forbidden: Pet does not belong to this household' }, 403);
+    }
+
     const event = await service.createEvent({
       ...body,
       loggedByUserId: user.id,
@@ -431,13 +451,18 @@ app.post('/api/events/batch-sync', async (c) => {
       return c.json({ error: 'events array required' }, 400);
     }
 
-    // Verify membership for each target household
+    // Verify membership and pet affiliation for each target household
     for (const evt of body.events) {
-      if (evt.householdId) {
-        const isMember = await service.isHouseholdMember(user.id, evt.householdId);
-        if (!isMember) {
-          return c.json({ error: 'Forbidden: Household access denied' }, 403);
-        }
+      if (!evt.householdId || !evt.petId) {
+        return c.json({ error: 'Each event must include householdId and petId' }, 400);
+      }
+      const isMember = await service.isHouseholdMember(user.id, evt.householdId);
+      if (!isMember) {
+        return c.json({ error: 'Forbidden: Household access denied' }, 403);
+      }
+      const pet = await service.getPet(evt.petId);
+      if (!pet || pet.householdId !== evt.householdId) {
+        return c.json({ error: 'Forbidden: Pet does not belong to specified household' }, 403);
       }
     }
 
@@ -472,11 +497,16 @@ app.post('/api/import/events', async (c) => {
     }
 
     for (const evt of body.events) {
-      if (evt.householdId) {
-        const isMember = await service.isHouseholdMember(user.id, evt.householdId);
-        if (!isMember) {
-          return c.json({ error: 'Forbidden: Household access denied' }, 403);
-        }
+      if (!evt.householdId || !evt.petId) {
+        return c.json({ error: 'Each event must include householdId and petId' }, 400);
+      }
+      const isMember = await service.isHouseholdMember(user.id, evt.householdId);
+      if (!isMember) {
+        return c.json({ error: 'Forbidden: Household access denied' }, 403);
+      }
+      const pet = await service.getPet(evt.petId);
+      if (!pet || pet.householdId !== evt.householdId) {
+        return c.json({ error: 'Forbidden: Pet does not belong to specified household' }, 403);
       }
     }
 
@@ -508,6 +538,11 @@ app.post('/api/import/dognotes', async (c) => {
     const isMember = await service.isHouseholdMember(user.id, body.householdId);
     if (!isMember) {
       return c.json({ error: 'Forbidden: Household access denied' }, 403);
+    }
+
+    const pet = await service.getPet(body.petId);
+    if (!pet || pet.householdId !== body.householdId) {
+      return c.json({ error: 'Forbidden: Pet does not belong to specified household' }, 403);
     }
 
     const result = await service.importDogNotesItems(body.items, body.householdId, body.petId);
@@ -571,6 +606,13 @@ app.post('/api/walks', async (c) => {
     const isMember = await service.isHouseholdMember(user.id, targetHouseholdId);
     if (!isMember) {
       return c.json({ error: 'Forbidden' }, 403);
+    }
+
+    if (body.petId) {
+      const pet = await service.getPet(body.petId);
+      if (!pet || pet.householdId !== targetHouseholdId) {
+        return c.json({ error: 'Forbidden: Pet does not belong to specified household' }, 403);
+      }
     }
 
     const walk = await service.saveWalkRoute({ ...body, householdId: targetHouseholdId });

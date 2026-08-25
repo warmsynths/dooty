@@ -31,6 +31,22 @@ const isUuid = (id?: string | null): boolean =>
   typeof id === 'string' &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
 
+function generateSecureCode(length: number = 6): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const bytes = new Uint8Array(length);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes)
+      .map((b) => chars[b % chars.length])
+      .join('');
+  }
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 export class DataService {
   private env: Bindings;
 
@@ -793,7 +809,7 @@ export class DataService {
   }
 
   async createInviteCode(householdId: string): Promise<string> {
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const code = generateSecureCode(6);
     const supabase = getSupabaseClient(this.env);
     if (supabase && isUuid(householdId)) {
       try {
@@ -817,11 +833,13 @@ export class DataService {
   async joinHouseholdByCode(
     code: string,
     displayName: string,
-    _role: string = 'member'
+    _role: string = 'member',
+    userId?: string
   ): Promise<Household | null> {
+    const cleanCode = code.trim().toUpperCase();
     const memberId = typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
-      : 'm-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+      : 'm-' + Date.now() + '-' + generateSecureCode(4);
 
     const supabase = getSupabaseClient(this.env);
     if (supabase) {
@@ -829,12 +847,16 @@ export class DataService {
         const { data: invite } = await supabase
           .from('household_invites')
           .select('*')
-          .eq('code', code.trim().toUpperCase())
+          .eq('code', cleanCode)
           .single();
         if (invite) {
+          if (new Date(invite.expires_at) < new Date()) {
+            throw new Error('Invite code has expired');
+          }
           await supabase.from('household_members').insert({
             id: memberId,
             household_id: invite.household_id,
+            user_id: userId || null,
             display_name: displayName,
             role: 'member',
           });
@@ -843,14 +865,22 @@ export class DataService {
         }
       } catch (err) {
         console.warn('Supabase joinHouseholdByCode error:', err);
+        if (err instanceof Error && err.message.includes('expired')) {
+          throw err;
+        }
       }
     }
 
-    const invite = memInvites.get(code.trim().toUpperCase());
+    const invite = memInvites.get(cleanCode);
     if (!invite) return null;
+    if (new Date(invite.expiresAt) < new Date()) {
+      throw new Error('Invite code has expired');
+    }
+
     const newMember: HouseholdMember = {
       id: memberId,
       householdId: invite.householdId,
+      userId: userId || undefined,
       displayName,
       role: 'member',
       joinedAt: new Date().toISOString(),
@@ -1316,8 +1346,12 @@ export class DataService {
 
   // --- WALKS ---
   async saveWalkRoute(walk: Partial<WalkRoute>): Promise<WalkRoute> {
+    const walkId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'walk-' + Date.now();
+
     const newWalk: WalkRoute = {
-      id: 'walk-' + Date.now(),
+      id: walkId,
       eventId: walk.eventId || '',
       householdId: walk.householdId || '',
       petId: walk.petId || '',
@@ -1327,11 +1361,60 @@ export class DataService {
       coordinates: walk.coordinates || [],
       createdAt: new Date().toISOString(),
     };
+
+    const supabase = getSupabaseClient(this.env);
+    if (supabase && isUuid(walk.householdId) && isUuid(walk.petId)) {
+      try {
+        const { error } = await supabase.from('walk_routes').insert({
+          id: isUuid(walkId) ? walkId : undefined,
+          event_id: walk.eventId && isUuid(walk.eventId) ? walk.eventId : null,
+          household_id: walk.householdId,
+          pet_id: walk.petId,
+          started_at: newWalk.startedAt,
+          ended_at: newWalk.endedAt,
+          distance_meters: newWalk.distanceMeters,
+          coordinates: newWalk.coordinates,
+        });
+        if (error) {
+          console.warn('Supabase saveWalkRoute warning:', error.message);
+        }
+      } catch (err) {
+        console.warn('Supabase saveWalkRoute error:', err);
+      }
+    }
+
     memWalks.push(newWalk);
     return newWalk;
   }
 
   async getWalkRoutes(petId: string): Promise<WalkRoute[]> {
+    const supabase = getSupabaseClient(this.env);
+    if (supabase && isUuid(petId)) {
+      try {
+        const { data, error } = await supabase
+          .from('walk_routes')
+          .select('*')
+          .eq('pet_id', petId)
+          .order('started_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          return data.map((w: any) => ({
+            id: w.id,
+            eventId: w.event_id || '',
+            householdId: w.household_id,
+            petId: w.pet_id,
+            startedAt: w.started_at,
+            endedAt: w.ended_at,
+            distanceMeters: Number(w.distance_meters || 0),
+            coordinates: w.coordinates || [],
+            createdAt: w.created_at,
+          }));
+        }
+      } catch (err) {
+        console.warn('Supabase getWalkRoutes error:', err);
+      }
+    }
+
     return memWalks.filter((w) => w.petId === petId);
   }
 }
