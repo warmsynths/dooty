@@ -1,0 +1,42 @@
+import { LitElement } from 'lit';
+export declare class DootySheet extends LitElement {
+    private selectedType;
+    private cons;
+    private size;
+    private mood;
+    private selectedMed;
+    private selectedMedDose;
+    private customMedName;
+    private weightKg;
+    private walkMin;
+    private walkKm;
+    private vetReason;
+    private symptom;
+    private portion;
+    private photoUrl;
+    private notes;
+    private locationName;
+    private weatherText;
+    private unsubscribe?;
+    private fileInput?;
+    private wasOpen;
+    connectedCallback(): void;
+    disconnectedCallback(): void;
+    static styles: import("lit").CSSResult;
+    private consNames;
+    private consNamesKo;
+    private typeDefs;
+    private medOptions;
+    private walkOptions;
+    private vetReasons;
+    private symptomOptions;
+    private portionOptions;
+    private moodOptions;
+    private handleSelectType;
+    private handleBackToTypes;
+    private triggerPhotoUpload;
+    private handleSave;
+    private close;
+    render(): import("lit-html").TemplateResult<1> | null;
+}
+//# sourceMappingURL=dooty-sheet.d.ts.map

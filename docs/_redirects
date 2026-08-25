@@ -1,0 +1,5 @@
+# Proxy API requests directly to the deployed Cloudflare Worker BFF
+/api/*  https://watslog-bff.warmsynthsiloveyou.workers.dev/api/:splat  200
+
+# SPA fallback
+/*  /index.html  200

@@ -1,0 +1,1 @@
+{"version":3,"file":"dooty-analytics.d.ts","sourceRoot":"","sources":["dooty-analytics.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAa,MAAM,KAAK,CAAC;AAK5C,qBACa,cAAe,SAAQ,UAAU;IACnC,OAAO,CAAC,SAAS,CAAC,CAAe;IACjC,OAAO,CAAC,cAAc,CAA2C;IAE1E,MAAM,CAAC,MAAM,0BA0HX;IAEF,iBAAiB;IAKjB,OAAO,CAAC,gBAAgB;IAKxB,MAAM;CAkHP"}

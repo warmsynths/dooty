@@ -1,0 +1,1 @@
+{"version":3,"file":"dooty-settings.d.ts","sourceRoot":"","sources":["dooty-settings.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAa,MAAM,KAAK,CAAC;AAI5C,qBACa,aAAc,SAAQ,UAAU;IAC3C,OAAO,CAAC,WAAW,CAAC,CAAa;IAEjC,MAAM,CAAC,MAAM,0BA4ZX;IAEF,iBAAiB;IAKjB,oBAAoB;IAKpB,OAAO,CAAC,WAAW;IASnB,OAAO,CAAC,eAAe;IAevB,OAAO,CAAC,aAAa;IAcrB,MAAM;CAmUP"}

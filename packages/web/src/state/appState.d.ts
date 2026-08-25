@@ -1,0 +1,76 @@
+import { Household, Pet, PetEvent, SupportedLocale, EventType, AuthUser, SignUpDTO, SignInDTO } from '@watslog/shared';
+type Listener = () => void;
+export interface PendingInviteItem {
+    code: string;
+    role: string;
+    when: string;
+    expiresAt: string;
+}
+declare class AppStateManager {
+    private listeners;
+    currentUser: AuthUser | null;
+    currentHousehold: Household | null;
+    userHouseholds: Household[];
+    currentPet: Pet | null;
+    pets: Pet[];
+    events: PetEvent[];
+    activeTab: 'today' | 'map' | 'analytics' | 'import' | 'settings' | 'invite' | 'dog' | 'deep' | 'wrapped';
+    authView: 'signin' | 'signup' | 'dogsetup' | 'join' | 'joindetails';
+    currentLocale: SupportedLocale;
+    isOnline: boolean;
+    pendingSyncCount: number;
+    userAvatar: string;
+    track: Record<string, boolean>;
+    nudges: Record<string, boolean>;
+    pendingInvites: PendingInviteItem[];
+    loggerModalOpen: boolean;
+    loggerEventType: EventType | null;
+    photoModalOpen: boolean;
+    photoModalTarget: 'pet' | 'user' | 'member';
+    photoModalTargetId: string;
+    photoModalCurrentAvatar: string;
+    photoModalTitle: string;
+    isLoading: boolean;
+    constructor();
+    subscribe(listener: Listener): () => void;
+    private notify;
+    get t(): import("@watslog/shared").TranslationSchema;
+    setLocale(locale: SupportedLocale): void;
+    setActiveTab(tab: 'today' | 'map' | 'analytics' | 'import' | 'settings' | 'invite' | 'dog' | 'deep' | 'wrapped'): void;
+    setAuthView(view: 'signin' | 'signup' | 'dogsetup' | 'join' | 'joindetails'): void;
+    setTrackingPreference(key: string, value: boolean): void;
+    setNudgePreference(key: string, value: boolean): void;
+    openLogger(eventType?: EventType | null): void;
+    closeLogger(): void;
+    openPhotoModal(opts: {
+        target: 'pet' | 'user' | 'member';
+        targetId?: string;
+        currentAvatar?: string;
+        title?: string;
+    }): void;
+    closePhotoModal(): void;
+    updatePetAvatar(petId: string, avatarUrl: string): Promise<void>;
+    updateUserAvatar(avatarUrl: string): Promise<void>;
+    updateMemberAvatar(memberId: string, avatarUrl: string): Promise<void>;
+    private loadPendingInvites;
+    createInvite(roleName?: string): Promise<string>;
+    revokeInvite(code: string): Promise<void>;
+    exportEventsCsv(): void;
+    init(): Promise<void>;
+    selectPet(pet: Pet): void;
+    selectHousehold(householdId: string): Promise<void>;
+    refreshEvents(): Promise<void>;
+    logEvent(eventType: EventType, notes?: string, metadata?: Record<string, any>, lat?: number, lng?: number): Promise<void>;
+    handleNetworkChange(isOnline: boolean): Promise<void>;
+    get isAuthenticated(): boolean;
+    signOut(): void;
+    signUp(dto: SignUpDTO): Promise<void>;
+    signIn(dto: SignInDTO): Promise<void>;
+    joinAuthenticated(code: string, role?: string): Promise<void>;
+    claimHousehold(householdId: string, role?: string): Promise<void>;
+    removeMember(memberId: string): Promise<void>;
+    checkPendingSync(): Promise<void>;
+}
+export declare const appState: AppStateManager;
+export {};
+//# sourceMappingURL=appState.d.ts.map
