@@ -114,6 +114,7 @@ export class DataService {
           name: dto.pet.name,
           species: dto.pet.species || 'dog',
           breed: dto.pet.breed || '',
+          birthday: dto.pet.birthday || '',
           avatarUrl: dto.pet.avatarUrl || '',
           createdAt: new Date().toISOString(),
         };
@@ -284,6 +285,7 @@ export class DataService {
         name: dto.pet.name,
         species: dto.pet.species || 'dog',
         breed: dto.pet.breed || '',
+        birthday: dto.pet.birthday || null,
         avatar_url: dto.pet.avatarUrl || '',
       });
     }

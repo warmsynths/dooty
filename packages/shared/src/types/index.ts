@@ -63,6 +63,7 @@ export interface SignUpDTO {
     species?: 'dog' | 'cat' | 'other';
     breed?: string;
     size?: 'S' | 'M' | 'L' | 'XL';
+    birthday?: string;
     avatarUrl?: string;
   };
   inviteCode?: string;

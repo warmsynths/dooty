@@ -27,10 +27,16 @@
   --font-body: 'Nunito', system-ui, -apple-system, sans-serif;
 }
 
-body.lang-ko {
-  --font-heading: 'Black Han Sans', 'Noto Sans KR', system-ui, sans-serif;
-  --font-body: 'Noto Sans KR', system-ui, sans-serif;
+body.lang-ko,
+html[lang="ko"] body {
+  --font-heading: 'Black Han Sans', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  --font-body: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
   word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.lang-ko * {
+  letter-spacing: -0.15px;
 }
 
 * {

@@ -157,7 +157,7 @@ export class DootyHeader extends LitElement {
             ? html`<div class="offline-badge">SYNCING ${pendingCount}</div>`
             : ''}
 
-          <div class="pet-pill" @click=${() => appState.setActiveTab('settings')}>
+          <div class="pet-pill" @click=${() => appState.setActiveTab('dog')}>
             <div class="pet-avatar-circle">
               ${petAvatar ? html`<img src="${petAvatar}" alt="${petName}" />` : '🐶'}
             </div>

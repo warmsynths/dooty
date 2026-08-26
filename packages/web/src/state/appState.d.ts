@@ -55,6 +55,7 @@ declare class AppStateManager {
     }): void;
     closePhotoModal(): void;
     updatePetAvatar(petId: string, avatarUrl: string): Promise<void>;
+    updatePetProfile(petId: string, updates: Partial<Pet>): Promise<void>;
     updateUserAvatar(avatarUrl: string): Promise<void>;
     updateMemberAvatar(memberId: string, avatarUrl: string): Promise<void>;
     private loadPendingInvites;

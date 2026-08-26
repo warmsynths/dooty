@@ -7,6 +7,8 @@ export declare class DootyAuth extends LitElement {
     private displayName;
     private userAvatar;
     private dogName;
+    private dogBreed;
+    private dogBirthday;
     private householdName;
     private dogAvatar;
     private setupSize;

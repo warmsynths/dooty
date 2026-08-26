@@ -6,6 +6,9 @@ export declare class DootyPhotoModal extends LitElement {
     private activeMode;
     private isProcessing;
     private errorMessage;
+    private petName;
+    private petBreed;
+    private petBirthday;
     private readonly petPresets;
     private readonly userPresets;
     static styles: import("lit").CSSResult;
@@ -13,6 +16,7 @@ export declare class DootyPhotoModal extends LitElement {
     disconnectedCallback(): void;
     private handleClose;
     private triggerFileInput;
+    private setAgeInYears;
     private handleFileSelect;
     private resizeImage;
     private handleSelectPreset;

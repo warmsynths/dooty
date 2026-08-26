@@ -11,6 +11,11 @@ export class DootyPhotoModal extends LitElement {
   @state() private isProcessing: boolean = false;
   @state() private errorMessage: string = '';
 
+  // Pet Profile editing state
+  @state() private petName: string = '';
+  @state() private petBreed: string = '';
+  @state() private petBirthday: string = '';
+
   private readonly petPresets = [
     { emoji: '🐶', bg: '#FFE485', label: 'Golden' },
     { emoji: '🐕', bg: '#FF9E79', label: 'Shiba' },
@@ -55,6 +60,7 @@ export class DootyPhotoModal extends LitElement {
       justify-content: center;
       padding: 16px;
       animation: fadeIn 0.15s ease-out;
+      box-sizing: border-box;
     }
 
     @keyframes fadeIn {
@@ -68,12 +74,13 @@ export class DootyPhotoModal extends LitElement {
       border-radius: 24px;
       box-shadow: 6px 6px 0 #17140F;
       width: 100%;
-      max-width: 420px;
+      max-width: 440px;
       max-height: 90vh;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-sizing: border-box;
     }
 
     @keyframes popIn {
@@ -118,10 +125,75 @@ export class DootyPhotoModal extends LitElement {
     }
 
     .modal-body {
-      padding: 20px;
+      padding: 18px 20px;
       display: flex;
       flex-direction: column;
       gap: 16px;
+      box-sizing: border-box;
+    }
+
+    /* Form Section */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #7D7362;
+    }
+
+    .input-box {
+      width: 100%;
+      box-sizing: border-box;
+      border: 2.5px solid #17140F;
+      border-radius: 14px;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #17140F;
+      background: #FFF9E9;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .input-box:focus {
+      background: #FFFFFF;
+      border-color: #FF5A3C;
+    }
+
+    .age-chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .age-chip {
+      padding: 5px 10px;
+      border-radius: 10px;
+      border: 2px solid #17140F;
+      background: #FFF;
+      font-size: 11px;
+      font-weight: 800;
+      color: #17140F;
+      cursor: pointer;
+      box-shadow: 1.5px 1.5px 0 #17140F;
+      transition: all 0.1s;
+      user-select: none;
+    }
+
+    .age-chip:hover {
+      background: #FFCE2E;
+    }
+
+    .age-chip:active {
+      transform: translate(1px, 1px);
+      box-shadow: 0.5px 0.5px 0 #17140F;
     }
 
     /* Preview Section */
@@ -130,16 +202,16 @@ export class DootyPhotoModal extends LitElement {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      padding: 14px;
+      gap: 8px;
+      padding: 12px;
       background: #FAF7EE;
       border: 2px dashed #D6CEBE;
       border-radius: 18px;
     }
 
     .avatar-preview-wrapper {
-      width: 100px;
-      height: 100px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
       border: 3px solid #17140F;
       box-shadow: 3px 3px 0 #17140F;
@@ -159,12 +231,12 @@ export class DootyPhotoModal extends LitElement {
     }
 
     .avatar-preview-emoji {
-      font-size: 48px;
+      font-size: 42px;
       line-height: 1;
     }
 
     .preview-label {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.8px;
@@ -205,7 +277,7 @@ export class DootyPhotoModal extends LitElement {
     .upload-dropzone {
       border: 2px dashed #17140F;
       border-radius: 16px;
-      padding: 24px 16px;
+      padding: 18px 14px;
       text-align: center;
       background: #FFFFFF;
       cursor: pointer;
@@ -213,7 +285,7 @@ export class DootyPhotoModal extends LitElement {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .upload-dropzone:hover {
@@ -225,17 +297,17 @@ export class DootyPhotoModal extends LitElement {
     }
 
     .dropzone-icon {
-      font-size: 32px;
+      font-size: 28px;
     }
 
     .dropzone-text {
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 800;
       color: #17140F;
     }
 
     .dropzone-subtext {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 600;
       color: #8C8271;
     }
@@ -248,8 +320,8 @@ export class DootyPhotoModal extends LitElement {
     .preset-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      max-height: 180px;
+      gap: 8px;
+      max-height: 160px;
       overflow-y: auto;
       padding: 4px;
     }
@@ -263,7 +335,7 @@ export class DootyPhotoModal extends LitElement {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-size: 26px;
+      font-size: 24px;
       cursor: pointer;
       transition: transform 0.1s;
     }
@@ -288,7 +360,7 @@ export class DootyPhotoModal extends LitElement {
     .url-text-input {
       width: 100%;
       box-sizing: border-box;
-      padding: 12px 14px;
+      padding: 11px 13px;
       border: 2.5px solid #17140F;
       border-radius: 12px;
       font-size: 13px;
@@ -329,23 +401,27 @@ export class DootyPhotoModal extends LitElement {
     .modal-actions {
       display: flex;
       gap: 10px;
-      margin-top: 6px;
+      margin-top: 4px;
     }
 
     .btn-save {
       flex: 2;
-      background: #FFCE2E;
-      color: #17140F;
+      background: #FF5A3C;
+      color: #FFFFFF;
       border: 3px solid #17140F;
-      border-radius: 14px;
-      padding: 12px;
+      border-radius: 16px;
+      padding: 13px;
       font-family: var(--font-heading, sans-serif);
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 800;
       cursor: pointer;
-      box-shadow: 3px 3px 0 #17140F;
+      box-shadow: 4px 4px 0 #17140F;
       text-align: center;
-      transition: transform 0.1s;
+      transition: transform 0.1s, background 0.15s;
+    }
+
+    .btn-save:hover {
+      background: #FF7659;
     }
 
     .btn-save:active {
@@ -364,8 +440,8 @@ export class DootyPhotoModal extends LitElement {
       background: #FFF;
       color: #8C8271;
       border: 2px solid #17140F;
-      border-radius: 14px;
-      padding: 12px;
+      border-radius: 16px;
+      padding: 13px;
       font-size: 13px;
       font-weight: 800;
       cursor: pointer;
@@ -382,8 +458,24 @@ export class DootyPhotoModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.unsubscribe = appState.subscribe(() => {
-      if (appState.photoModalOpen && !this.previewUrl) {
-        this.previewUrl = appState.photoModalCurrentAvatar || '';
+      if (appState.photoModalOpen) {
+        if (!this.previewUrl) {
+          this.previewUrl = appState.photoModalCurrentAvatar || '';
+        }
+        if (appState.photoModalTarget === 'pet') {
+          const currentPet = appState.currentPet;
+          if (currentPet) {
+            if (!this.petName) this.petName = currentPet.name || '';
+            if (!this.petBreed) this.petBreed = currentPet.breed || '';
+            if (!this.petBirthday && currentPet.birthday) {
+              try {
+                this.petBirthday = new Date(currentPet.birthday).toISOString().slice(0, 10);
+              } catch (e) {
+                this.petBirthday = currentPet.birthday;
+              }
+            }
+          }
+        }
       }
       this.requestUpdate();
     });
@@ -398,12 +490,22 @@ export class DootyPhotoModal extends LitElement {
     this.previewUrl = '';
     this.urlInput = '';
     this.errorMessage = '';
+    this.petName = '';
+    this.petBreed = '';
+    this.petBirthday = '';
     appState.closePhotoModal();
   }
 
   private triggerFileInput() {
     const input = this.shadowRoot?.querySelector('#fileInput') as HTMLInputElement;
     input?.click();
+  }
+
+  private setAgeInYears(years: number) {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - years);
+    this.petBirthday = d.toISOString().slice(0, 10);
+    this.requestUpdate();
   }
 
   private async handleFileSelect(e: Event) {
@@ -438,7 +540,6 @@ export class DootyPhotoModal extends LitElement {
           let width = img.width;
           let height = img.height;
 
-          // Compute square center crop/resize
           const size = Math.min(width, height);
           const startX = (width - size) / 2;
           const startY = (height - size) / 2;
@@ -466,7 +567,6 @@ export class DootyPhotoModal extends LitElement {
   }
 
   private handleSelectPreset(preset: { emoji: string; bg: string }) {
-    // Generate an SVG data URI or emoji badge
     const svg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="${encodeURIComponent(
       preset.bg
     )}"/><text x="50" y="65" font-size="54" text-anchor="middle">${preset.emoji}</text></svg>`;
@@ -498,7 +598,12 @@ export class DootyPhotoModal extends LitElement {
     if (target === 'pet') {
       const petId = targetId || appState.currentPet?.id;
       if (petId) {
-        await appState.updatePetAvatar(petId, finalUrl);
+        await appState.updatePetProfile(petId, {
+          name: this.petName.trim() || appState.currentPet?.name || 'Pet',
+          breed: this.petBreed.trim() || appState.currentPet?.breed || '',
+          birthday: this.petBirthday || appState.currentPet?.birthday || '',
+          avatarUrl: finalUrl,
+        });
       }
     } else if (target === 'user') {
       await appState.updateUserAvatar(finalUrl);
@@ -513,9 +618,10 @@ export class DootyPhotoModal extends LitElement {
         bubbles: true,
         composed: true,
         detail: {
-          title: isKo ? '사진 업데이트됨' : 'Photo Updated',
-          subtitle: isKo ? '프로필 사진이 저장되었습니다.' : 'Avatar successfully updated.',
-          badge: '📸',
+          title: target === 'pet'
+            ? (isKo ? `${this.petName || '반려견'} 프로필 저장됨` : `${this.petName || 'Pet'} Profile Saved`)
+            : (isKo ? '사진 업데이트됨' : 'Photo Updated'),
+          sub: isKo ? '변경사항이 성공적으로 적용되었습니다.' : 'Changes successfully saved.',
         },
       })
     );
@@ -532,7 +638,7 @@ export class DootyPhotoModal extends LitElement {
     const modalTitle =
       appState.photoModalTitle ||
       (target === 'pet'
-        ? isKo ? '반려동물 사진 변경' : 'Change Pet Photo'
+        ? isKo ? '반려동물 정보 및 사진 수정' : 'Edit Pet Profile & Photo'
         : isKo ? '프로필 사진 변경' : 'Change Profile Photo');
 
     return html`
@@ -546,6 +652,55 @@ export class DootyPhotoModal extends LitElement {
 
           <!-- Body -->
           <div class="modal-body">
+            <!-- If editing Pet, show Name, Breed, and Birthday fields -->
+            ${target === 'pet'
+              ? html`
+                  <div class="form-group">
+                    <label class="field-label">${isKo ? '반려견 이름' : 'Pet Name'}</label>
+                    <input
+                      type="text"
+                      class="input-box"
+                      placeholder="${isKo ? '반려견 이름' : 'e.g. Jjols, Watson'}"
+                      .value=${this.petName}
+                      @input=${(e: any) => (this.petName = e.target.value)}
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label class="field-label">${isKo ? '품종' : 'Breed'}</label>
+                    <input
+                      type="text"
+                      class="input-box"
+                      placeholder="${isKo ? '예: 스푸들, 비글 믹스' : 'e.g. Spoodle, Beagle mix'}"
+                      .value=${this.petBreed}
+                      @input=${(e: any) => (this.petBreed = e.target.value)}
+                    />
+                  </div>
+
+                  <div class="form-group">
+                    <label class="field-label">${isKo ? '생년월일 (나이 계산)' : 'Birthday (for Age calculation)'}</label>
+                    <input
+                      type="date"
+                      class="input-box"
+                      .value=${this.petBirthday}
+                      @input=${(e: any) => (this.petBirthday = e.target.value)}
+                    />
+                    <div style="font-size: 10.5px; font-weight: 700; color: #7D7362; margin-top: 4px;">
+                      ${isKo ? '빠른 나이 선택:' : 'Quick Age Select:'}
+                    </div>
+                    <div class="age-chips-container">
+                      ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(
+                        (yrs) => html`
+                          <div class="age-chip" @click=${() => this.setAgeInYears(yrs)}>
+                            ${isKo ? `${yrs}살` : `${yrs} yr${yrs > 1 ? 's' : ''}`}
+                          </div>
+                        `
+                      )}
+                    </div>
+                  </div>
+                `
+              : null}
+
             <!-- Avatar Preview -->
             <div class="preview-container">
               <div class="avatar-preview-wrapper">
@@ -553,7 +708,7 @@ export class DootyPhotoModal extends LitElement {
                   ? html`<img src="${this.previewUrl}" class="avatar-preview-img" alt="Preview" />`
                   : html`<div class="avatar-preview-emoji">${target === 'pet' ? '🐶' : '👤'}</div>`}
               </div>
-              <div class="preview-label">${isKo ? '현재 미리보기' : 'Current Preview'}</div>
+              <div class="preview-label">${isKo ? '프로필 사진 / 아바타' : 'Profile Photo / Avatar'}</div>
             </div>
 
             <!-- Error Banner -->
@@ -643,13 +798,13 @@ export class DootyPhotoModal extends LitElement {
 
             <!-- Action Buttons -->
             <div class="modal-actions">
-              <button class="btn-clear" @click=${this.handleRemovePhoto}>
-                ${isKo ? '제거' : 'Remove'}
+              <button class="btn-clear" @click=${this.handleClose}>
+                ${isKo ? '취소' : 'Cancel'}
               </button>
               <button class="btn-save" ?disabled=${this.isProcessing} @click=${this.handleSave}>
                 ${this.isProcessing
-                  ? isKo ? '처리 중...' : 'Processing...'
-                  : isKo ? '저장하기' : 'Save Photo'}
+                  ? (isKo ? '저장 중...' : 'Saving...')
+                  : (isKo ? '저장하기' : 'Save Changes')}
               </button>
             </div>
           </div>

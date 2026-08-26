@@ -87,8 +87,14 @@ class AppStateManager {
     if (storedLocale && (storedLocale === 'en' || storedLocale === 'ko')) {
       this.currentLocale = storedLocale;
     } else {
-      const browserLang = navigator.language || '';
+      const browserLang = typeof navigator !== 'undefined' ? navigator.language || '' : '';
       this.currentLocale = browserLang.startsWith('ko') ? 'ko' : 'en';
+    }
+
+    // Apply initial locale class to body and html
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = this.currentLocale;
+      document.body.classList.toggle('lang-ko', this.currentLocale === 'ko');
     }
 
     // Load tracking preferences
@@ -162,6 +168,10 @@ class AppStateManager {
   setLocale(locale: SupportedLocale) {
     this.currentLocale = locale;
     localStorage.setItem('dooty_locale', locale);
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = locale;
+      document.body.classList.toggle('lang-ko', locale === 'ko');
+    }
     this.notify();
   }
 
@@ -234,18 +244,31 @@ class AppStateManager {
   }
 
   async updatePetAvatar(petId: string, avatarUrl: string) {
+    await this.updatePetProfile(petId, { avatarUrl });
+  }
+
+  async updatePetProfile(petId: string, updates: Partial<Pet>) {
     if (this.currentPet && this.currentPet.id === petId) {
-      this.currentPet = { ...this.currentPet, avatarUrl };
+      this.currentPet = { ...this.currentPet, ...updates };
     }
-    this.pets = this.pets.map((p) => (p.id === petId ? { ...p, avatarUrl } : p));
-    localStorage.setItem(`dooty_pet_avatar_${petId}`, avatarUrl);
+    this.pets = this.pets.map((p) => (p.id === petId ? { ...p, ...updates } : p));
+    if (this.currentHousehold) {
+      this.currentHousehold = {
+        ...this.currentHousehold,
+        pets: this.pets,
+      };
+      localStorage.setItem('dooty_household_data', JSON.stringify(this.currentHousehold));
+    }
+    if (updates.avatarUrl !== undefined) {
+      localStorage.setItem(`dooty_pet_avatar_${petId}`, updates.avatarUrl);
+    }
     this.notify();
 
     if (navigator.onLine) {
       try {
-        await ApiClient.updatePet(petId, { avatarUrl });
+        await ApiClient.updatePet(petId, updates);
       } catch (err) {
-        console.warn('Could not sync pet avatar to server:', err);
+        console.warn('Could not sync pet profile to server:', err);
       }
     }
   }

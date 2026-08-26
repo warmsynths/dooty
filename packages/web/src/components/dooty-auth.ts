@@ -15,7 +15,9 @@ export class DootyAuth extends LitElement {
   @state() private userAvatar: string = '';
 
   // Dog & Household setup fields (Step 2)
-  @state() private dogName: string = '';
+  @state() private dogName: string = 'Nacho';
+  @state() private dogBreed: string = '';
+  @state() private dogBirthday: string = '';
   @state() private householdName: string = '';
   @state() private dogAvatar: string = '';
   @state() private setupSize: 'S' | 'M' | 'L' | 'XL' = 'M';
@@ -494,12 +496,43 @@ export class DootyAuth extends LitElement {
     }
 
     .track-dot {
-      width: 16px;
-      height: 16px;
-      border-radius: 5px;
-      border: 2.5px solid #17140F;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #17140F;
       background: #FFF;
+      box-sizing: border-box;
       flex: none;
+    }
+
+    .age-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .age-chip {
+      padding: 6px 11px;
+      border-radius: 12px;
+      border: 2px solid #17140F;
+      background: #FFF;
+      font-size: 11px;
+      font-weight: 800;
+      color: #17140F;
+      cursor: pointer;
+      box-shadow: 1.5px 1.5px 0 #17140F;
+      transition: all 0.1s;
+      user-select: none;
+    }
+
+    .age-chip:hover {
+      background: #FFCE2E;
+    }
+
+    .age-chip:active {
+      transform: translate(1px, 1px);
+      box-shadow: 0.5px 0.5px 0 #17140F;
     }
 
     .track-chip.active .track-dot {
@@ -765,6 +798,8 @@ export class DootyAuth extends LitElement {
         pet: {
           name: this.dogName.trim(),
           species: 'dog',
+          breed: this.dogBreed.trim(),
+          birthday: this.dogBirthday,
           size: this.setupSize,
           avatarUrl: this.dogAvatar,
         },
@@ -1102,6 +1137,43 @@ export class DootyAuth extends LitElement {
                   @input=${(e: any) => (this.dogName = e.target.value)}
                   required
                 />
+              </div>
+            </div>
+
+            <div>
+              <label class="field-label">${appState.currentLocale === 'ko' ? '품종 (선택)' : 'Breed (optional)'}</label>
+              <input
+                type="text"
+                class="input-box"
+                placeholder="${appState.currentLocale === 'ko' ? '예: 스푸들, 비글 믹스' : 'e.g. Spoodle, Beagle mix'}"
+                .value=${this.dogBreed}
+                @input=${(e: any) => (this.dogBreed = e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label class="field-label">${appState.currentLocale === 'ko' ? '생일 또는 나이' : 'Birthday or Age'}</label>
+              <input
+                type="date"
+                class="input-box"
+                .value=${this.dogBirthday}
+                @input=${(e: any) => (this.dogBirthday = e.target.value)}
+              />
+              <div class="age-chips-row">
+                ${[1, 2, 3, 4, 5, 6, 7, 8].map(
+                  (yrs) => html`
+                    <div
+                      class="age-chip"
+                      @click=${() => {
+                        const d = new Date();
+                        d.setFullYear(d.getFullYear() - yrs);
+                        this.dogBirthday = d.toISOString().slice(0, 10);
+                      }}
+                    >
+                      ${appState.currentLocale === 'ko' ? `${yrs}살` : `${yrs} yr${yrs > 1 ? 's' : ''}`}
+                    </div>
+                  `
+                )}
               </div>
             </div>
 

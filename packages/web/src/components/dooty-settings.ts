@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import type { Pet } from '@watslog/shared';
 import { appState } from '../state/appState.js';
 
 @customElement('dooty-settings')
@@ -478,8 +479,8 @@ export class DootySettings extends LitElement {
       { id: '2', displayName: 'Priya', role: 'member', avatarUrl: '' },
       { id: '3', displayName: 'Dan the walker', role: 'member', avatarUrl: '' },
     ];
-    const pets = appState.pets?.length > 0 ? appState.pets : (appState.currentPet ? [appState.currentPet] : [
-      { id: 'p1', name: 'Nacho', breed: 'Beagle mix · 5 yrs · 14.2 kg', species: 'dog', householdId: household?.id || '1', avatarUrl: '', createdAt: new Date().toISOString() }
+    const pets: Pet[] = appState.pets?.length > 0 ? appState.pets : (appState.currentPet ? [appState.currentPet] : [
+      { id: 'p1', name: 'Nacho', breed: 'Beagle mix · 5 yrs · 14.2 kg', species: 'dog', householdId: household?.id || '1', avatarUrl: '', birthday: '', createdAt: new Date().toISOString() }
     ]);
     const totalLogs = appState.events?.length || 1204;
 
@@ -683,7 +684,33 @@ export class DootySettings extends LitElement {
                     ${p.name}
                   </div>
                   <div style="font-size: 11.5px; font-weight: 600; color: #6A6152;">
-                    ${p.breed || (isKo ? '비글 믹스 · 5살 · 14.2 kg' : 'Beagle mix · 5 yrs · 14.2 kg')}
+                    ${(() => {
+                      if (p.breed && p.breed.includes('·')) return p.breed;
+                      let ageStr = '';
+                      if (p.birthday) {
+                        const birth = new Date(p.birthday);
+                        const now = new Date();
+                        if (!isNaN(birth.getTime())) {
+                          const diffMonths = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+                          if (diffMonths >= 12) {
+                            const yrs = Math.floor(diffMonths / 12);
+                            ageStr = isKo ? `${yrs}살` : `${yrs} yr${yrs > 1 ? 's' : ''}`;
+                          } else if (diffMonths > 0) {
+                            ageStr = isKo ? `${diffMonths}개월` : `${diffMonths} mo${diffMonths > 1 ? 's' : ''}`;
+                          }
+                        }
+                      }
+                      if (!ageStr) ageStr = isKo ? '5살' : '5 yrs';
+                      const breed = p.breed || (isKo ? '비글 믹스' : 'Beagle mix');
+                      const rawWeightEvents = (appState.events || [])
+                        .filter((e) => e.eventType === 'weight' && (e.metadata?.weightKg || e.notes))
+                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                      const wKg = rawWeightEvents.length > 0
+                        ? Number(rawWeightEvents[0].metadata?.weightKg || parseFloat(rawWeightEvents[0].notes || '0') || 14.2)
+                        : 14.2;
+                      const weightStr = isKo ? `${wKg.toFixed(1)}kg` : `${wKg.toFixed(1)} kg`;
+                      return `${breed} · ${ageStr} · ${weightStr}`;
+                    })()}
                   </div>
                 </div>
                 <div style="font-size: 11.5px; font-weight: 800; color: #9A9080; flex: none;">
