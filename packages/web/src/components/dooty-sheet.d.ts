@@ -1,4 +1,5 @@
 import { LitElement } from 'lit';
+import './dooty-map-picker.js';
 export declare class DootySheet extends LitElement {
     private selectedType;
     private cons;
@@ -20,6 +21,9 @@ export declare class DootySheet extends LitElement {
     private lng?;
     private isLocating;
     private showLocationPicker;
+    private showMapPicker;
+    private showTimePicker;
+    private customTimestamp;
     private weatherText;
     private isFetchingWeather;
     private unsubscribe?;
@@ -50,8 +54,15 @@ export declare class DootySheet extends LitElement {
     private fetchWeather;
     private wmoCodeToDescription;
     private tryReverseGeocode;
+    private formatDisplayTime;
+    private toDatetimeLocalValue;
+    private handleCustomTimeInput;
+    private setQuickOffsetMinutes;
+    private setQuickOffsetDays;
+    private setNow;
     private handleSave;
     private handleDelete;
+    private handleSpotSelected;
     private close;
     render(): import("lit-html").TemplateResult<1> | null;
 }

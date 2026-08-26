@@ -142,6 +142,7 @@ export class DataService {
         data: {
           display_name: dto.displayName,
         },
+        ...(dto.redirectTo ? { emailRedirectTo: dto.redirectTo } : {}),
       },
     });
 

@@ -18,6 +18,7 @@ import './dooty-settings.js';
 import './dooty-invite.js';
 import './dooty-importer.js';
 import './dooty-sheet.js';
+import './dooty-map-picker.js';
 import './dooty-photo-modal.js';
 import './dooty-auth.js';
 let WatslogApp = class WatslogApp extends LitElement {

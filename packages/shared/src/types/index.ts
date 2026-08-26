@@ -69,6 +69,7 @@ export interface SignUpDTO {
   claimHouseholdId?: string;
   role?: string;
   trackingPreferences?: Record<string, boolean>;
+  redirectTo?: string;
 }
 
 export interface SignInDTO {

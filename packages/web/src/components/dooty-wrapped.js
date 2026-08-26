@@ -129,6 +129,15 @@ let DootyWrapped = class DootyWrapped extends LitElement {
         const goldenHourStr = maxHourCount > 0
             ? `${maxHour > 12 ? maxHour - 12 : maxHour || 12}:00 ${maxHour >= 12 ? 'pm' : 'am'}`
             : isKo ? '기록 없음' : 'No data yet';
+        // Active care days
+        const activeDaysSet = new Set();
+        events.forEach((e) => {
+            const d = new Date(e.timestamp);
+            if (!isNaN(d.getTime())) {
+                activeDaysSet.add(`${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`);
+            }
+        });
+        const activeDaysCount = activeDaysSet.size;
         const cards = [
             {
                 k: isKo ? '총 배출량' : 'Total output',
@@ -167,11 +176,11 @@ let DootyWrapped = class DootyWrapped extends LitElement {
                 rot: '-0.7deg',
             },
             {
-                k: isKo ? '기록 데이터' : 'Database Status',
-                v: totalCount > 0 ? (isKo ? '실시간 동기화' : 'Synced Live') : (isKo ? '대기 중' : 'Waiting'),
+                k: isKo ? '돌봄 기록 일수' : 'Days active',
+                v: isKo ? `${activeDaysCount}일` : `${activeDaysCount} days`,
                 sub: isKo
-                    ? 'Cloudflare & Supabase 클라우드에 안전하게 보관됩니다.'
-                    : 'Securely saved to Cloudflare & Supabase.',
+                    ? '반려견의 건강한 일상을 함께 기록한 날들입니다.'
+                    : 'Days dedicated to tracking your pet’s wellbeing.',
                 bg: '#FF5A3C',
                 fg: '#FFF',
                 label: '#FFE3DC',

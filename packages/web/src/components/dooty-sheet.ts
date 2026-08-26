@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
 import { EventType, EventMetadata, MOOD_OPTIONS, MOOD_MAP_KO } from '@watslog/shared';
+import './dooty-map-picker.js';
 
 @customElement('dooty-sheet')
 export class DootySheet extends LitElement {
@@ -25,6 +26,9 @@ export class DootySheet extends LitElement {
   @state() private lng?: number = undefined;
   @state() private isLocating: boolean = false;
   @state() private showLocationPicker: boolean = false;
+  @state() private showMapPicker: boolean = false;
+  @state() private showTimePicker: boolean = false;
+  @state() private customTimestamp: string = '';
   @state() private weatherText: string = '';
   @state() private isFetchingWeather: boolean = false;
 
@@ -73,6 +77,7 @@ export class DootySheet extends LitElement {
             this.lat = evt.latitude;
             this.lng = evt.longitude;
             this.weatherText = meta.weather || '';
+            this.customTimestamp = evt.timestamp || new Date().toISOString();
             if (meta.consistency) this.cons = meta.consistency;
             if (meta.size) this.size = meta.size;
             if (meta.mood) this.mood = meta.mood;
@@ -86,6 +91,8 @@ export class DootySheet extends LitElement {
             if (meta.portion) this.portion = meta.portion;
             this.isLocating = false;
             this.showLocationPicker = false;
+            this.showMapPicker = false;
+            this.showTimePicker = false;
             this.isFetchingWeather = false;
           } else {
             this.selectedType = appState.loggerEventType || null;
@@ -95,8 +102,11 @@ export class DootySheet extends LitElement {
             this.notes = '';
             this.photoUrl = '';
             this.customMedName = '';
+            this.customTimestamp = new Date().toISOString();
             this.isLocating = false;
             this.showLocationPicker = false;
+            this.showMapPicker = false;
+            this.showTimePicker = false;
             this.weatherText = '';
             this.isFetchingWeather = false;
             this.autoFetchWeather();
@@ -347,7 +357,7 @@ export class DootySheet extends LitElement {
       transform: translateY(1px);
     }
 
-    .location-picker-card {
+    .location-picker-card, .time-picker-card {
       background: #FFF;
       border: 3px solid #17140F;
       border-radius: 18px;
@@ -357,6 +367,24 @@ export class DootySheet extends LitElement {
       flex-direction: column;
       gap: 10px;
       animation: fadeIn 0.15s ease-out;
+    }
+
+    .custom-time-input {
+      width: 100%;
+      border: 2.5px solid #17140F;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 13.5px;
+      font-family: inherit;
+      font-weight: 800;
+      color: #17140F;
+      background: #FFFBF2;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .custom-time-input:focus {
+      border-color: #2B5BE8;
     }
 
     .picker-header {
@@ -434,6 +462,35 @@ export class DootySheet extends LitElement {
       color: #17140F;
       cursor: pointer;
       box-shadow: 2px 2px 0 #17140F;
+    }
+
+    .map-picker-trigger-btn {
+      width: 100%;
+      background: #FFF;
+      border: 2.5px solid #17140F;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 13px;
+      color: #17140F;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      box-shadow: 2px 2px 0 #17140F;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.08s ease;
+      box-sizing: border-box;
+    }
+
+    .map-picker-trigger-btn:hover {
+      background: #FFFBF2;
+    }
+
+    .map-picker-trigger-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 #17140F;
     }
 
     .picker-section-lbl {
@@ -1230,6 +1287,77 @@ export class DootySheet extends LitElement {
     }
   }
 
+  private formatDisplayTime(isoString?: string): { main: string; sub: string } {
+    const isKo = appState.currentLocale === 'ko';
+    const timestamp = isoString || new Date().toISOString();
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) {
+      return {
+        main: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase(),
+        sub: isKo ? '오늘 · 탭하여 변경' : 'Today · tap to edit',
+      };
+    }
+    const now = new Date();
+    const isToday =
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate();
+
+    const timePart = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase();
+    if (isToday) {
+      return {
+        main: timePart,
+        sub: isKo ? '오늘 · 탭하여 변경' : 'Today · tap to edit',
+      };
+    } else {
+      const datePart = isKo
+        ? `${d.getMonth() + 1}월 ${d.getDate()}일`
+        : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return {
+        main: `${datePart}, ${timePart}`,
+        sub: isKo ? '지정된 일시 · 탭하여 변경' : 'Custom date · tap to edit',
+      };
+    }
+  }
+
+  private toDatetimeLocalValue(isoString?: string): string {
+    const d = isoString ? new Date(isoString) : new Date();
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  private handleCustomTimeInput(val: string) {
+    if (!val) {
+      this.customTimestamp = new Date().toISOString();
+    } else {
+      const d = new Date(val);
+      this.customTimestamp = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    }
+    this.requestUpdate();
+  }
+
+  private setQuickOffsetMinutes(offsetMinutes: number) {
+    const target = new Date(Date.now() - offsetMinutes * 60 * 1000);
+    this.customTimestamp = target.toISOString();
+    this.requestUpdate();
+  }
+
+  private setQuickOffsetDays(offsetDays: number) {
+    const target = new Date(Date.now() - offsetDays * 24 * 60 * 60 * 1000);
+    this.customTimestamp = target.toISOString();
+    this.requestUpdate();
+  }
+
+  private setNow() {
+    this.customTimestamp = new Date().toISOString();
+    this.requestUpdate();
+  }
+
   private async handleSave() {
     const isKo = appState.currentLocale === 'ko';
     const type = (this.selectedType || 'poop') as EventType;
@@ -1239,10 +1367,10 @@ export class DootySheet extends LitElement {
     let toastTitle = isKo ? '기록 완료!' : 'Logged it!';
     let toastSub = '';
 
+    const finalTimestamp = this.customTimestamp || (appState.editingEvent ? appState.editingEvent.timestamp : new Date().toISOString());
+
     const metadata: EventMetadata = {
-      timestamp: appState.editingEvent
-        ? appState.editingEvent.timestamp || new Date().toISOString()
-        : new Date().toISOString(),
+      timestamp: finalTimestamp,
       photoUrl: this.photoUrl || undefined,
       locationName: this.locationName || (this.lat ? `${this.lat.toFixed(4)}, ${this.lng?.toFixed(4)}` : undefined),
       weather: this.weatherText,
@@ -1341,12 +1469,12 @@ export class DootySheet extends LitElement {
         metadata,
         this.lat,
         this.lng,
-        appState.editingEvent.timestamp
+        finalTimestamp
       );
       toastTitle = isKo ? '기록 수정 완료!' : 'Entry updated!';
       toastSub = isKo ? '수정사항이 저장되었습니다.' : 'Changes saved.';
     } else {
-      await appState.logEvent(type, summaryNotes, metadata, this.lat, this.lng);
+      await appState.logEvent(type, summaryNotes, metadata, this.lat, this.lng, finalTimestamp);
     }
 
     this.close();
@@ -1386,6 +1514,21 @@ export class DootySheet extends LitElement {
     );
   }
 
+  private handleSpotSelected(e: CustomEvent<{ lat?: number; lng?: number; locationName: string }>) {
+    this.lat = e.detail.lat;
+    this.lng = e.detail.lng;
+    if (e.detail.locationName) {
+      this.locationName = e.detail.locationName;
+    } else if (this.lat !== undefined && this.lng !== undefined) {
+      this.locationName = `${this.lat.toFixed(4)}, ${this.lng.toFixed(4)}`;
+    }
+    if (this.lat !== undefined && this.lng !== undefined) {
+      this.fetchWeather(this.lat, this.lng);
+    }
+    this.showMapPicker = false;
+    this.requestUpdate();
+  }
+
   private close() {
     this.selectedType = null;
     this.notes = '';
@@ -1394,8 +1537,11 @@ export class DootySheet extends LitElement {
     this.locationName = '';
     this.lat = undefined;
     this.lng = undefined;
+    this.customTimestamp = '';
     this.isLocating = false;
     this.showLocationPicker = false;
+    this.showMapPicker = false;
+    this.showTimePicker = false;
     appState.closeLogger();
   }
 
@@ -1487,20 +1633,68 @@ export class DootySheet extends LitElement {
                   <div class="form-col">
                     <!-- Top Pill Row: Time & Status/Weather -->
                     <div class="pill-row">
-                      <div class="pill-info">
-                        <div class="pill-label">${isKo ? '시간' : 'Time'}</div>
+                      <div
+                        class="pill-info ${this.showTimePicker ? 'active-picker' : ''}"
+                        @click=${() => {
+                          this.showTimePicker = !this.showTimePicker;
+                          if (this.showTimePicker) this.showLocationPicker = false;
+                        }}
+                      >
+                        <div class="pill-label">${isKo ? '시간' : 'Time'} ⏱️</div>
                         <div class="pill-val">
-                          ${new Date().toLocaleTimeString([], {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          }).toLowerCase()}
+                          ${this.formatDisplayTime(this.customTimestamp).main}
+                        </div>
+                        <div class="pill-sub">
+                          ${this.formatDisplayTime(this.customTimestamp).sub}
                         </div>
                       </div>
                       <div class="pill-info">
                         <div class="pill-label">${isKo ? '상태 / 날씨' : 'Weather / GPS'}</div>
                         <div class="pill-val">${this.isFetchingWeather ? (isKo ? '날씨 확인중…' : 'fetching…') : (this.weatherText || (isKo ? '—' : '—'))}</div>
+                        <div class="pill-sub">${this.weatherText ? (isKo ? '실시간 날씨' : 'Live weather') : (isKo ? 'GPS 기반' : 'GPS synced')}</div>
                       </div>
                     </div>
+
+                    <!-- Date & Time Picker Card -->
+                    ${this.showTimePicker
+                      ? html`
+                          <div class="time-picker-card">
+                            <div class="picker-header">
+                              <span class="picker-title">${isKo ? '일시 및 시간 변경' : 'Adjust Date & Time'}</span>
+                              <button class="picker-close-btn" @click=${() => (this.showTimePicker = false)}>✕</button>
+                            </div>
+
+                            <div class="picker-section-lbl">${isKo ? '빠른 시간 선택' : 'Quick Time'}</div>
+                            <div class="location-chips-row">
+                              <div class="location-chip" @click=${() => this.setNow()}>
+                                ⏱️ ${isKo ? '지금' : 'Now'}
+                              </div>
+                              <div class="location-chip" @click=${() => this.setQuickOffsetMinutes(15)}>
+                                ${isKo ? '15분 전' : '15m ago'}
+                              </div>
+                              <div class="location-chip" @click=${() => this.setQuickOffsetMinutes(30)}>
+                                ${isKo ? '30분 전' : '30m ago'}
+                              </div>
+                              <div class="location-chip" @click=${() => this.setQuickOffsetMinutes(60)}>
+                                ${isKo ? '1시간 전' : '1h ago'}
+                              </div>
+                              <div class="location-chip" @click=${() => this.setQuickOffsetDays(1)}>
+                                ${isKo ? '어제 이맘때' : 'Yesterday'}
+                              </div>
+                            </div>
+
+                            <div class="picker-section-lbl">${isKo ? '직접 날짜 & 시간 지정' : 'Exact Date & Time'}</div>
+                            <div class="custom-loc-input-row">
+                              <input
+                                type="datetime-local"
+                                class="custom-time-input"
+                                .value=${this.toDatetimeLocalValue(this.customTimestamp)}
+                                @input=${(e: any) => this.handleCustomTimeInput(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        `
+                      : null}
 
                     <!-- 1. Consistency (Poop / Vomit) -->
                     ${showCons
@@ -1797,6 +1991,15 @@ export class DootySheet extends LitElement {
                                 : null}
                             </div>
 
+                            <!-- Open Interactive Map Spot Picker -->
+                            <button
+                              class="map-picker-trigger-btn"
+                              @click=${() => (this.showMapPicker = true)}
+                            >
+                              <span>🗺️</span>
+                              <span>${isKo ? '지도에서 핀 찍기 / 위치 찾기' : 'Find / Pin Spot on Map'}</span>
+                            </button>
+
                             <div class="picker-section-lbl">${isKo ? '자주 쓰는 장소' : 'Quick Spots'}</div>
                             <div class="location-chips-row">
                               ${(isKo ? this.locationPresetsKo : this.locationPresets).map(
@@ -1875,6 +2078,16 @@ export class DootySheet extends LitElement {
               `
             : null}
         </div>
+
+        <!-- Interactive Map Spot Picker Modal -->
+        <dooty-map-picker
+          .open=${this.showMapPicker}
+          .initialLat=${this.lat}
+          .initialLng=${this.lng}
+          .initialLocationName=${this.locationName}
+          @spot-selected=${(e: CustomEvent) => this.handleSpotSelected(e)}
+          @close=${() => (this.showMapPicker = false)}
+        ></dooty-map-picker>
       </div>
     `;
   }

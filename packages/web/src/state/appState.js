@@ -311,6 +311,26 @@ class AppStateManager {
         this.isLoading = true;
         this.notify();
         try {
+            // Check for auth tokens in URL hash or query params (from Supabase email confirmation link)
+            if (typeof window !== 'undefined') {
+                if (window.location.hash && window.location.hash.includes('access_token=')) {
+                    const hash = window.location.hash.substring(1);
+                    const hashParams = new URLSearchParams(hash);
+                    const accessToken = hashParams.get('access_token');
+                    if (accessToken) {
+                        localStorage.setItem('dooty_auth_token', accessToken);
+                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                    }
+                }
+                else if (window.location.search && window.location.search.includes('access_token=')) {
+                    const searchParams = new URLSearchParams(window.location.search);
+                    const accessToken = searchParams.get('access_token');
+                    if (accessToken) {
+                        localStorage.setItem('dooty_auth_token', accessToken);
+                        window.history.replaceState(null, '', window.location.pathname);
+                    }
+                }
+            }
             const token = localStorage.getItem('dooty_auth_token');
             if (token) {
                 try {
@@ -456,7 +476,7 @@ class AppStateManager {
             this.notify();
         }
     }
-    async logEvent(eventType, notes = '', metadata, lat, lng) {
+    async logEvent(eventType, notes = '', metadata, lat, lng, customTimestamp) {
         if (!this.currentHousehold || !this.currentPet)
             return;
         const loggedByName = this.currentUser?.displayName ||
@@ -468,7 +488,7 @@ class AppStateManager {
             eventType,
             loggedByName,
             loggedByUserId: this.currentUser?.id,
-            timestamp: new Date().toISOString(),
+            timestamp: customTimestamp || new Date().toISOString(),
             notes,
             latitude: lat,
             longitude: lng,
@@ -554,6 +574,9 @@ class AppStateManager {
         this.isLoading = true;
         this.notify();
         try {
+            if (!dto.redirectTo && typeof window !== 'undefined') {
+                dto.redirectTo = window.location.origin + window.location.pathname;
+            }
             const session = await ApiClient.signUp(dto);
             this.currentUser = session.user;
             this.currentHousehold = session.activeHousehold;

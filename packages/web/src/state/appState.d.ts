@@ -66,7 +66,7 @@ declare class AppStateManager {
     selectHousehold(householdId: string): Promise<void>;
     refreshEvents(): Promise<void>;
     syncEvents(): Promise<void>;
-    logEvent(eventType: EventType, notes?: string, metadata?: Record<string, any>, lat?: number, lng?: number): Promise<void>;
+    logEvent(eventType: EventType, notes?: string, metadata?: Record<string, any>, lat?: number, lng?: number, customTimestamp?: string): Promise<void>;
     updateEvent(eventId: string, eventType: EventType, notes?: string, metadata?: Record<string, any>, lat?: number, lng?: number, timestamp?: string): Promise<void>;
     deleteEvent(eventId: string): Promise<void>;
     handleNetworkChange(isOnline: boolean): Promise<void>;
