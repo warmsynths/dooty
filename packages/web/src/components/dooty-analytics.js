@@ -7,7 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
-import { calculatePetAnalytics } from '@watslog/shared';
+import { calculatePetAnalytics } from '@dooty/shared';
 let DootyAnalytics = class DootyAnalytics extends LitElement {
     constructor() {
         super(...arguments);

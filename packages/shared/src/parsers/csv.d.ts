@@ -15,7 +15,7 @@ export declare function normalizeUserName(rawName: string): string;
  */
 export declare function normalizePetName(rawName: string): string;
 /**
- * Normalizes CSV event types to Watslog EventType
+ * Normalizes CSV event types to Dooty EventType
  */
 export declare function normalizeCsvEventType(rawEvent: string): EventType;
 /**

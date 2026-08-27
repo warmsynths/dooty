@@ -6,7 +6,7 @@ import {
   predictNextPoop,
   PetEvent,
   formatLocalizedEventNotes,
-} from '@watslog/shared';
+} from '@dooty/shared';
 
 @customElement('dooty-home')
 export class DootyHome extends LitElement {

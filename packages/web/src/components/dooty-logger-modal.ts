@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
-import { EVENT_METADATA, EventType, ALL_EVENT_TYPES } from '@watslog/shared';
+import { EVENT_METADATA, EventType, ALL_EVENT_TYPES } from '@dooty/shared';
 
 @customElement('dooty-logger-modal')
 export class DootyLoggerModal extends LitElement {

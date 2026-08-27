@@ -7,7 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
-import { calculatePetAnalytics, predictNextPoop, formatLocalizedEventNotes, } from '@watslog/shared';
+import { calculatePetAnalytics, predictNextPoop, formatLocalizedEventNotes, } from '@dooty/shared';
 let DootyHome = class DootyHome extends LitElement {
     static { this.styles = css `
     :host {

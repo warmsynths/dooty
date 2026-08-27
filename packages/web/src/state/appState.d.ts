@@ -1,4 +1,4 @@
-import { Household, Pet, PetEvent, SupportedLocale, EventType, AuthUser, SignUpDTO, SignInDTO, TimeRangeFilter } from '@watslog/shared';
+import { Household, Pet, PetEvent, SupportedLocale, EventType, AuthUser, SignUpDTO, SignInDTO, TimeRangeFilter } from '@dooty/shared';
 type Listener = () => void;
 export interface PendingInviteItem {
     code: string;
@@ -37,7 +37,7 @@ declare class AppStateManager {
     constructor();
     subscribe(listener: Listener): () => void;
     private notify;
-    get t(): import("@watslog/shared").TranslationSchema;
+    get t(): import("@dooty/shared").TranslationSchema;
     setLocale(locale: SupportedLocale): void;
     setActiveTab(tab: 'today' | 'map' | 'analytics' | 'import' | 'settings' | 'invite' | 'dog' | 'deep' | 'wrapped'): void;
     setAuthView(view: 'signin' | 'signup' | 'dogsetup' | 'join' | 'joindetails'): void;

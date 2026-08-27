@@ -7,7 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
-import { MOOD_OPTIONS, MOOD_MAP_KO } from '@watslog/shared';
+import { MOOD_OPTIONS, MOOD_MAP_KO } from '@dooty/shared';
 import './dooty-map-picker.js';
 let DootySheet = class DootySheet extends LitElement {
     constructor() {

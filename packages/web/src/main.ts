@@ -1,5 +1,5 @@
 import './styles/theme.css';
-import './components/watslog-app.js';
+import './components/dooty-app.js';
 import { registerSW } from 'virtual:pwa-register';
 
 // Register PWA service worker with auto-update

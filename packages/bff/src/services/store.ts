@@ -17,7 +17,7 @@ import {
   SignInDTO,
   AuthSessionResponse,
   GetEventsQuery,
-} from '@watslog/shared';
+} from '@dooty/shared';
 import { getSupabaseClient, Bindings } from './supabase.js';
 
 // In-memory data store for local dev / fallback
@@ -360,7 +360,7 @@ export class DataService {
       return {
         user: {
           id: 'u-local',
-          email: 'local@watslog.dev',
+          email: 'local@dooty.dev',
           displayName: 'Local User',
           createdAt: new Date().toISOString(),
         },

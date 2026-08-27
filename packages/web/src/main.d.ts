@@ -1,3 +1,3 @@
 import './styles/theme.css';
-import './components/watslog-app.js';
+import './components/dooty-app.js';
 //# sourceMappingURL=main.d.ts.map

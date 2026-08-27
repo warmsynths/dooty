@@ -1,4 +1,4 @@
-# Product Specification: Watslog (Dooty) Pet Activity Tracking PWA
+# Product Specification: Dooty Pet Activity Tracking PWA
 
 ## Problem Statement
 
@@ -6,7 +6,7 @@ Pet owners, couples, and multi-member households struggle to stay in sync regard
 
 ## Solution
 
-Watslog (Dooty) is a fast, offline-first Progressive Web Application (PWA) built with Lit Web Components, a Cloudflare Worker Backend-for-Frontend (BFF) gateway, and Supabase PostgreSQL. It provides shared household spaces where multiple family members can log daily events for their pets simultaneously. It features a playful, tactile neo-brutalist user interface (Dooty design system), GPS walk recording, Leaflet mapping of bathroom spots, rich time-of-day histograms and health trend analytics, a robust DogNotes JSON migration tool, and seamless bilingual support (English and Korean).
+Dooty is a fast, offline-first Progressive Web Application (PWA) built with Lit Web Components, a Cloudflare Worker Backend-for-Frontend (BFF) gateway, and Supabase PostgreSQL. It provides shared household spaces where multiple family members can log daily events for their pets simultaneously. It features a playful, tactile neo-brutalist user interface (Dooty design system), GPS walk recording, Leaflet mapping of bathroom spots, rich time-of-day histograms and health trend analytics, a robust DogNotes JSON migration tool, and seamless bilingual support (English and Korean).
 
 ---
 
@@ -84,7 +84,7 @@ Watslog (Dooty) is a fast, offline-first Progressive Web Application (PWA) built
 - Contextual date and time formatting using standard `Intl.DateTimeFormat`.
 
 ### 8. Offline Storage & PWA Service Worker
-- Local **IndexedDB** database (`watslog-offline`) stores cached pet/event data and an outgoing `pending_events` sync queue.
+- Local **IndexedDB** database (`dooty-offline`) stores cached pet/event data and an outgoing `pending_events` sync queue.
 - Online event listener reconciles pending offline events via `/api/events/batch-sync` upon reconnection.
 - Vite PWA Plugin configures Service Worker cache strategies for HTML shell, CSS, Google Fonts, and Leaflet assets.
 

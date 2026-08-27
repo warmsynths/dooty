@@ -6,7 +6,7 @@ import {
   convertAnyImportToPetEvents,
   UniversalImportSummary,
   ParsedImportResult,
-} from '@watslog/shared';
+} from '@dooty/shared';
 import { ApiClient } from '../api/client.js';
 
 @customElement('dooty-importer')

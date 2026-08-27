@@ -18,7 +18,7 @@
     "useDefineForClassFields": false,
     "baseUrl": ".",
     "paths": {
-      "@watslog/shared": ["./packages/shared/src/index.ts"]
+      "@dooty/shared": ["./packages/shared/src/index.ts"]
     }
   }
 }

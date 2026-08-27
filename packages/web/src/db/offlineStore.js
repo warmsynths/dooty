@@ -1,5 +1,5 @@
 import { openDB } from 'idb';
-const DB_NAME = 'watslog-offline-db';
+const DB_NAME = 'dooty-offline-db';
 const DB_VERSION = 1;
 let dbPromise = null;
 export function getOfflineDB() {

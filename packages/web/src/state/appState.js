@@ -1,4 +1,4 @@
-import { translations, } from '@watslog/shared';
+import { translations, } from '@dooty/shared';
 import { ApiClient } from '../api/client.js';
 import { getPendingEvents, getEventsOffline } from '../db/offlineStore.js';
 class AppStateManager {

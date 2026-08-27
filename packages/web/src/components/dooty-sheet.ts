@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
-import { EventType, EventMetadata, MOOD_OPTIONS, MOOD_MAP_KO } from '@watslog/shared';
+import { EventType, EventMetadata, MOOD_OPTIONS, MOOD_MAP_KO } from '@dooty/shared';
 import './dooty-map-picker.js';
 
 @customElement('dooty-sheet')

@@ -8,7 +8,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import L from 'leaflet';
 import { appState } from '../state/appState.js';
-import { formatLocalizedEventNotes } from '@watslog/shared';
+import { formatLocalizedEventNotes } from '@dooty/shared';
 // Helper to compute convex hull for pet territory boundary
 function getConvexHull(points) {
     if (points.length <= 2)

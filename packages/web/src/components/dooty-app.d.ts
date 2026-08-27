@@ -13,7 +13,7 @@ import './dooty-sheet.js';
 import './dooty-map-picker.js';
 import './dooty-photo-modal.js';
 import './dooty-auth.js';
-export declare class WatslogApp extends LitElement {
+export declare class DootyApp extends LitElement {
     private activeView;
     private toast;
     private burstCount;
@@ -25,4 +25,4 @@ export declare class WatslogApp extends LitElement {
     private showToast;
     render(): import("lit-html").TemplateResult<1>;
 }
-//# sourceMappingURL=watslog-app.d.ts.map
+//# sourceMappingURL=dooty-app.d.ts.map

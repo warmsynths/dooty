@@ -2,7 +2,7 @@ import { LitElement, html, css, PropertyValues } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import L from 'leaflet';
 import { appState } from '../state/appState.js';
-import { formatLocalizedEventNotes, PetEvent } from '@watslog/shared';
+import { formatLocalizedEventNotes, PetEvent } from '@dooty/shared';
 
 // Helper to compute convex hull for pet territory boundary
 function getConvexHull(points: [number, number][]): [number, number][] {

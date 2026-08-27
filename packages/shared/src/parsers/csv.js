@@ -89,7 +89,7 @@ export function normalizePetName(rawName) {
     return trimmed || 'jjols';
 }
 /**
- * Normalizes CSV event types to Watslog EventType
+ * Normalizes CSV event types to Dooty EventType
  */
 export function normalizeCsvEventType(rawEvent) {
     const normalized = (rawEvent || '').trim().toLowerCase();

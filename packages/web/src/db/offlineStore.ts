@@ -1,7 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { PetEvent, CreateEventDTO, Household, Pet } from '@watslog/shared';
+import { PetEvent, CreateEventDTO, Household, Pet } from '@dooty/shared';
 
-interface WatslogDBSchema extends DBSchema {
+interface DootyDBSchema extends DBSchema {
   events: {
     key: string;
     value: PetEvent;
@@ -17,14 +17,14 @@ interface WatslogDBSchema extends DBSchema {
   };
 }
 
-const DB_NAME = 'watslog-offline-db';
+const DB_NAME = 'dooty-offline-db';
 const DB_VERSION = 1;
 
-let dbPromise: Promise<IDBPDatabase<WatslogDBSchema>> | null = null;
+let dbPromise: Promise<IDBPDatabase<DootyDBSchema>> | null = null;
 
 export function getOfflineDB() {
   if (!dbPromise) {
-    dbPromise = openDB<WatslogDBSchema>(DB_NAME, DB_VERSION, {
+    dbPromise = openDB<DootyDBSchema>(DB_NAME, DB_VERSION, {
       upgrade(db) {
         if (!db.objectStoreNames.contains('events')) {
           const eventStore = db.createObjectStore('events', { keyPath: 'id' });

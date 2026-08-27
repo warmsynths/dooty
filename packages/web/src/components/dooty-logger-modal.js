@@ -7,7 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
-import { EVENT_METADATA, ALL_EVENT_TYPES } from '@watslog/shared';
+import { EVENT_METADATA, ALL_EVENT_TYPES } from '@dooty/shared';
 let DootyLoggerModal = class DootyLoggerModal extends LitElement {
     constructor() {
         super(...arguments);

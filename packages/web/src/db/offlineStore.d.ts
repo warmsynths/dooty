@@ -1,6 +1,6 @@
 import { DBSchema, IDBPDatabase } from 'idb';
-import { PetEvent, CreateEventDTO } from '@watslog/shared';
-interface WatslogDBSchema extends DBSchema {
+import { PetEvent, CreateEventDTO } from '@dooty/shared';
+interface DootyDBSchema extends DBSchema {
     events: {
         key: string;
         value: PetEvent;
@@ -22,7 +22,7 @@ interface WatslogDBSchema extends DBSchema {
         value: any;
     };
 }
-export declare function getOfflineDB(): Promise<IDBPDatabase<WatslogDBSchema>>;
+export declare function getOfflineDB(): Promise<IDBPDatabase<DootyDBSchema>>;
 export declare function saveEventsOffline(events: PetEvent[]): Promise<void>;
 export declare function getEventsOffline(petId: string, options?: {
     startDate?: string;

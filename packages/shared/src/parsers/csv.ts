@@ -100,7 +100,7 @@ export function normalizePetName(rawName: string): string {
 }
 
 /**
- * Normalizes CSV event types to Watslog EventType
+ * Normalizes CSV event types to Dooty EventType
  */
 export function normalizeCsvEventType(rawEvent: string): EventType {
   const normalized = (rawEvent || '').trim().toLowerCase();

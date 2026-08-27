@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
-import { calculatePetAnalytics, PetAnalytics } from '@watslog/shared';
+import { calculatePetAnalytics, PetAnalytics } from '@dooty/shared';
 
 @customElement('dooty-analytics')
 export class DootyAnalytics extends LitElement {

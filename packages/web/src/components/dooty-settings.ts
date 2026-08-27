@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import type { Pet } from '@watslog/shared';
+import type { Pet } from '@dooty/shared';
 import { appState } from '../state/appState.js';
 
 @customElement('dooty-settings')

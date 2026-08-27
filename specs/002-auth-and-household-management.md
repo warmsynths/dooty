@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Users of Dooty/Watslog currently create household and pet records in an unauthenticated or device-locked state without real user account credentials (Email and Password). Consequently, when a user switches devices, opens an incognito window, clears browser local storage, or experiences cache evictions, they are locked out of their existing household records and presented only with the initial setup form. Furthermore, pet parents, partners, roommates, and professional dog walkers often manage or contribute to multiple pet households (e.g. their own pet at home plus walking a neighbor or client's dog), but the system lacks the ability for a single authenticated user account to belong to and switch between multiple households seamlessly.
+Users of Dooty currently create household and pet records in an unauthenticated or device-locked state without real user account credentials (Email and Password). Consequently, when a user switches devices, opens an incognito window, clears browser local storage, or experiences cache evictions, they are locked out of their existing household records and presented only with the initial setup form. Furthermore, pet parents, partners, roommates, and professional dog walkers often manage or contribute to multiple pet households (e.g. their own pet at home plus walking a neighbor or client's dog), but the system lacks the ability for a single authenticated user account to belong to and switch between multiple households seamlessly.
 
 ## Solution
 

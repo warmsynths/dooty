@@ -12,7 +12,7 @@ import {
   SignInDTO,
   AuthSessionResponse,
   GetEventsQuery,
-} from '@watslog/shared';
+} from '@dooty/shared';
 import {
   enqueuePendingEvent,
   getPendingEvents,

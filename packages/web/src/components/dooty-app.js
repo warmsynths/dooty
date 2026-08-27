@@ -21,7 +21,7 @@ import './dooty-sheet.js';
 import './dooty-map-picker.js';
 import './dooty-photo-modal.js';
 import './dooty-auth.js';
-let WatslogApp = class WatslogApp extends LitElement {
+let DootyApp = class DootyApp extends LitElement {
     constructor() {
         super(...arguments);
         this.activeView = 'today';
@@ -264,15 +264,15 @@ let WatslogApp = class WatslogApp extends LitElement {
 };
 __decorate([
     state()
-], WatslogApp.prototype, "activeView", void 0);
+], DootyApp.prototype, "activeView", void 0);
 __decorate([
     state()
-], WatslogApp.prototype, "toast", void 0);
+], DootyApp.prototype, "toast", void 0);
 __decorate([
     state()
-], WatslogApp.prototype, "burstCount", void 0);
-WatslogApp = __decorate([
-    customElement('watslog-app')
-], WatslogApp);
-export { WatslogApp };
-//# sourceMappingURL=watslog-app.js.map
+], DootyApp.prototype, "burstCount", void 0);
+DootyApp = __decorate([
+    customElement('dooty-app')
+], DootyApp);
+export { DootyApp };
+//# sourceMappingURL=dooty-app.js.map

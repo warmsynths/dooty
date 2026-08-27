@@ -16,8 +16,8 @@ import './dooty-map-picker.js';
 import './dooty-photo-modal.js';
 import './dooty-auth.js';
 
-@customElement('watslog-app')
-export class WatslogApp extends LitElement {
+@customElement('dooty-app')
+export class DootyApp extends LitElement {
   @state() private activeView: string = 'today';
   @state() private toast: { title: string; sub: string } | null = null;
   @state() private burstCount: number = 0;

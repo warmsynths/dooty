@@ -1,5 +1,5 @@
 -- ==============================================================================
--- WATSLOG / DOOTY DATABASE SCHEMA (Supabase PostgreSQL)
+-- DOOTY DATABASE SCHEMA (Supabase PostgreSQL)
 -- ==============================================================================
 
 -- Enable UUID extension if not enabled

@@ -1,12 +1,12 @@
 {
-  "name": "watslog-monorepo",
+  "name": "dooty-monorepo",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=@watslog/web",
-    "dev:all": "concurrently \"npm run dev --workspace=@watslog/bff\" \"npm run dev --workspace=@watslog/web\"",
+    "dev": "npm run dev --workspace=@dooty/web",
+    "dev:all": "concurrently \"npm run dev --workspace=@dooty/bff\" \"npm run dev --workspace=@dooty/web\"",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },

@@ -11,7 +11,7 @@ import {
   SignUpDTO,
   SignInDTO,
   AuthUser,
-} from '@watslog/shared';
+} from '@dooty/shared';
 
 const app = new Hono<{ Bindings: Bindings }>();
 

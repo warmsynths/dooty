@@ -1,4 +1,4 @@
-import { Household, Pet, PetEvent, CreateEventDTO, UpdateEventDTO, CreateHouseholdDTO, PetAnalytics, DogNotesImportItem, WalkRoute, SignUpDTO, SignInDTO, AuthSessionResponse, GetEventsQuery } from '@watslog/shared';
+import { Household, Pet, PetEvent, CreateEventDTO, UpdateEventDTO, CreateHouseholdDTO, PetAnalytics, DogNotesImportItem, WalkRoute, SignUpDTO, SignInDTO, AuthSessionResponse, GetEventsQuery } from '@dooty/shared';
 export declare class ApiClient {
     static signUp(dto: SignUpDTO): Promise<AuthSessionResponse>;
     static signIn(dto: SignInDTO): Promise<AuthSessionResponse>;

@@ -10,7 +10,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@watslog/shared': path.resolve(__dirname, '../shared/src/index.ts'),
+      '@dooty/shared': path.resolve(__dirname, '../shared/src/index.ts'),
     },
   },
   server: {
