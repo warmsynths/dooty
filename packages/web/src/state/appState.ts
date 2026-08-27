@@ -35,7 +35,7 @@ class AppStateManager {
   pets: Pet[] = [];
   events: PetEvent[] = [];
 
-  activeTab: 'today' | 'map' | 'analytics' | 'import' | 'settings' | 'invite' | 'dog' | 'deep' | 'wrapped' = 'today';
+  activeTab: 'today' | 'map' | 'history' | 'analytics' | 'import' | 'settings' | 'invite' | 'dog' | 'deep' | 'wrapped' = 'today';
   authView: 'signin' | 'signup' | 'dogsetup' | 'join' | 'joindetails' = 'signin';
   currentLocale: SupportedLocale = 'en';
 
@@ -80,6 +80,40 @@ class AppStateManager {
   photoModalCurrentAvatar: string = '';
   photoModalTitle: string = '';
   isLoading: boolean = false;
+
+  // Pet switcher bottom sheet
+  petSwitcherOpen: boolean = false;
+
+  // History State
+  historyMonthOffset: number = 0;
+  historySelectedDay: number | null = null;
+  historyTypeFilters: string[] = [];
+  historyMemberFilter: string = 'all';
+  historySearchOpen: boolean = false;
+  historySearchQuery: string = '';
+
+  // Live Walk State
+  activeWalk: {
+    startTime: number;
+    pausedTotal: number;
+    pausedAt: number | null;
+    route: [number, number][];
+    petIds: string[];
+  } | null = null;
+  walkView: 'live' | 'summary' | null = null;
+  walkHomeAsk: boolean = false;
+  homeAsked: boolean = false;
+  walkTimerInterval?: any;
+  walkSummaryData: {
+    durationSec: number;
+    distanceKm: number;
+    pace: string;
+    route: [number, number][];
+    petNames: string[];
+    startTime: string;
+    endTime: string;
+  } | null = null;
+
 
   constructor() {
     // Detect initial locale
@@ -175,10 +209,221 @@ class AppStateManager {
     this.notify();
   }
 
-  setActiveTab(tab: 'today' | 'map' | 'analytics' | 'import' | 'settings' | 'invite' | 'dog' | 'deep' | 'wrapped') {
+  setActiveTab(tab: 'today' | 'map' | 'history' | 'analytics' | 'import' | 'settings' | 'invite' | 'dog' | 'deep' | 'wrapped') {
     this.activeTab = tab;
     this.notify();
   }
+
+  // --- Pet Switcher Methods ---
+  openPetSwitcher() {
+    this.petSwitcherOpen = true;
+    this.notify();
+  }
+
+  closePetSwitcher() {
+    this.petSwitcherOpen = false;
+    this.notify();
+  }
+
+  selectPetById(petId: string) {
+    const pet = this.pets.find((p) => p.id === petId);
+    if (pet) {
+      this.selectPet(pet);
+      this.closePetSwitcher();
+    }
+  }
+
+  // --- History Management Methods ---
+  setHistoryMonthOffset(offset: number) {
+    this.historyMonthOffset = offset;
+    this.historySelectedDay = null;
+    this.notify();
+  }
+
+  setHistorySelectedDay(day: number | null) {
+    this.historySelectedDay = day;
+    this.notify();
+  }
+
+  toggleHistoryTypeFilter(typeId: string) {
+    if (this.historyTypeFilters.includes(typeId)) {
+      this.historyTypeFilters = this.historyTypeFilters.filter((t) => t !== typeId);
+    } else {
+      this.historyTypeFilters = [...this.historyTypeFilters, typeId];
+    }
+    this.notify();
+  }
+
+  setHistoryMemberFilter(member: string) {
+    this.historyMemberFilter = member;
+    this.notify();
+  }
+
+  clearHistoryFilters() {
+    this.historyTypeFilters = [];
+    this.historyMemberFilter = 'all';
+    this.historySearchQuery = '';
+    this.notify();
+  }
+
+  setHistorySearchOpen(open: boolean) {
+    this.historySearchOpen = open;
+    this.notify();
+  }
+
+  setHistorySearchQuery(query: string) {
+    this.historySearchQuery = query;
+    this.notify();
+  }
+
+  // --- Live Walk Tracking Methods ---
+  startLiveWalk(petIds?: string[]) {
+    if (this.walkTimerInterval) clearInterval(this.walkTimerInterval);
+    const chosenPetIds = petIds && petIds.length > 0 ? petIds : this.currentPet ? [this.currentPet.id] : [];
+    this.activeWalk = {
+      startTime: Date.now(),
+      pausedTotal: 0,
+      pausedAt: null,
+      route: [],
+      petIds: chosenPetIds,
+    };
+    this.walkView = 'live';
+    this.walkHomeAsk = false;
+    this.homeAsked = false;
+    this.walkSummaryData = null;
+    this.notify();
+
+    // Start tick interval
+    this.walkTimerInterval = setInterval(() => {
+      if (!this.activeWalk || this.activeWalk.pausedAt) return;
+      const sec = this.getWalkSeconds();
+      // Auto home check prompt after 25s (test mock) or geo arrival
+      if (!this.homeAsked && sec >= 120) {
+        this.walkHomeAsk = true;
+        this.homeAsked = true;
+      }
+      this.notify();
+    }, 1000);
+  }
+
+  getWalkSeconds(): number {
+    if (!this.activeWalk) return 0;
+    const now = Date.now();
+    const held = this.activeWalk.pausedTotal + (this.activeWalk.pausedAt ? now - this.activeWalk.pausedAt : 0);
+    return Math.max(0, Math.floor((now - this.activeWalk.startTime - held) / 1000));
+  }
+
+  getWalkDistanceKm(): string {
+    const sec = this.getWalkSeconds();
+    return (sec / 3600 * 4.8).toFixed(2);
+  }
+
+  getWalkPace(): string {
+    const sec = this.getWalkSeconds();
+    if (sec < 60) return "9'40\"";
+    const km = sec / 3600 * 4.8;
+    if (km <= 0) return "9'40\"";
+    const paceMin = (sec / 60) / km;
+    const m = Math.floor(paceMin);
+    const s = Math.round((paceMin - m) * 60);
+    return `${m}'${String(s).padStart(2, '0')}"`;
+  }
+
+  pauseLiveWalk() {
+    if (!this.activeWalk) return;
+    const now = Date.now();
+    if (this.activeWalk.pausedAt) {
+      // Resume
+      this.activeWalk.pausedTotal += (now - this.activeWalk.pausedAt);
+      this.activeWalk.pausedAt = null;
+    } else {
+      // Pause
+      this.activeWalk.pausedAt = now;
+    }
+    this.notify();
+  }
+
+  minimizeWalk() {
+    this.walkView = null;
+    this.notify();
+  }
+
+  expandWalk() {
+    this.walkView = 'live';
+    this.notify();
+  }
+
+  keepWalking() {
+    this.walkHomeAsk = false;
+    this.notify();
+  }
+
+  endLiveWalk() {
+    if (this.walkTimerInterval) clearInterval(this.walkTimerInterval);
+    if (!this.activeWalk) return;
+
+    const sec = this.getWalkSeconds();
+    const km = parseFloat(this.getWalkDistanceKm());
+    const pace = this.getWalkPace();
+    const petNames = this.activeWalk.petIds
+      .map((id) => this.pets.find((p) => p.id === id)?.name)
+      .filter(Boolean) as string[];
+
+    const d0 = new Date(this.activeWalk.startTime);
+    const d1 = new Date();
+    const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+    this.walkSummaryData = {
+      durationSec: sec,
+      distanceKm: km,
+      pace,
+      route: this.activeWalk.route,
+      petNames: petNames.length > 0 ? petNames : [this.currentPet?.name || 'Pet'],
+      startTime: formatTime(d0),
+      endTime: formatTime(d1),
+    };
+
+    this.walkView = 'summary';
+    this.walkHomeAsk = false;
+    this.notify();
+  }
+
+  async saveLiveWalk(notes = '', photoUrl = '') {
+    if (!this.walkSummaryData) return;
+    const data = this.walkSummaryData;
+    const minStr = Math.max(1, Math.round(data.durationSec / 60)) + ' min';
+    const kmStr = data.distanceKm + ' km';
+
+    // Log walk event
+    await this.logEvent(
+      'walk' as EventType,
+      notes || `Walk · ${minStr} · ${kmStr}`,
+      {
+        walkDuration: minStr,
+        walkDistance: kmStr,
+        photoUrl,
+        petNames: data.petNames,
+      }
+    );
+
+    this.activeWalk = null;
+    this.walkView = null;
+    this.walkSummaryData = null;
+    this.walkHomeAsk = false;
+    this.homeAsked = false;
+    this.notify();
+  }
+
+  discardLiveWalk() {
+    if (this.walkTimerInterval) clearInterval(this.walkTimerInterval);
+    this.activeWalk = null;
+    this.walkView = null;
+    this.walkSummaryData = null;
+    this.walkHomeAsk = false;
+    this.homeAsked = false;
+    this.notify();
+  }
+
 
   setAuthView(view: 'signin' | 'signup' | 'dogsetup' | 'join' | 'joindetails') {
     this.authView = view;

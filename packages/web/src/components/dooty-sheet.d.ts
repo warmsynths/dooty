@@ -24,6 +24,7 @@ export declare class DootySheet extends LitElement {
     private showMapPicker;
     private showTimePicker;
     private customTimestamp;
+    private walkPetIds;
     private weatherText;
     private isFetchingWeather;
     private unsubscribe?;

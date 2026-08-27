@@ -1,1 +1,1 @@
-{"version":3,"file":"dooty-dock.d.ts","sourceRoot":"","sources":["dooty-dock.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAa,MAAM,KAAK,CAAC;AAI5C,qBACa,SAAU,SAAQ,UAAU;IACvC,OAAO,CAAC,WAAW,CAAC,CAAa;IAEjC,MAAM,CAAC,MAAM,0BA+OX;IAEF,iBAAiB;IAKjB,oBAAoB;IAKpB,MAAM;CAsEP"}
+{"version":3,"file":"dooty-dock.d.ts","sourceRoot":"","sources":["dooty-dock.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,UAAU,EAAa,MAAM,KAAK,CAAC;AAI5C,qBACa,SAAU,SAAQ,UAAU;IACvC,OAAO,CAAC,WAAW,CAAC,CAAa;IAEjC,MAAM,CAAC,MAAM,0BAiOX;IAEF,iBAAiB;IAKjB,oBAAoB;IAKpB,MAAM;CA6EP"}

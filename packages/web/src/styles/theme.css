@@ -79,6 +79,12 @@ input, select, textarea {
 }
 
 /* Exact Animations from Design */
+@property --tbp {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
 @keyframes tb-pop {
   0% {
     opacity: 0;
@@ -90,6 +96,31 @@ input, select, textarea {
   100% {
     opacity: 1;
     transform: translateY(0) rotate(0);
+  }
+}
+
+@keyframes tb-popout {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+
+@keyframes tb-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
   }
 }
 
@@ -121,3 +152,116 @@ input, select, textarea {
     transform: translateY(0);
   }
 }
+
+@keyframes tb-sheetout {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes tb-scrim {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes tb-scrimout {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes tb-collapse {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes tb-screen {
+  0% {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tb-row {
+  0% {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tb-cell {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes tb-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.045);
+  }
+}
+
+@keyframes tb-nudge {
+  0%, 70%, 100% {
+    transform: rotate(0) scale(1);
+  }
+  77% {
+    transform: rotate(-6deg) scale(1.05);
+  }
+  85% {
+    transform: rotate(6deg) scale(1.05);
+  }
+  93% {
+    transform: rotate(-2deg) scale(1.01);
+  }
+}
+
+@keyframes tb-gauge {
+  0% {
+    --tbp: 0%;
+  }
+  100% {
+    --tbp: 82%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.08s !important;
+  }
+}
+

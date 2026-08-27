@@ -1,6 +1,7 @@
 import { LitElement } from 'lit';
 import './dooty-dock.js';
 import './dooty-home.js';
+import './dooty-history.js';
 import './dooty-numbers.js';
 import './dooty-map.js';
 import './dooty-dog.js';
@@ -12,6 +13,8 @@ import './dooty-importer.js';
 import './dooty-sheet.js';
 import './dooty-map-picker.js';
 import './dooty-photo-modal.js';
+import './dooty-pet-switcher.js';
+import './dooty-walk.js';
 import './dooty-auth.js';
 export declare class DootyApp extends LitElement {
     private activeView;

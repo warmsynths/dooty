@@ -49,6 +49,21 @@ class AppStateManager {
         this.photoModalCurrentAvatar = '';
         this.photoModalTitle = '';
         this.isLoading = false;
+        // Pet switcher bottom sheet
+        this.petSwitcherOpen = false;
+        // History State
+        this.historyMonthOffset = 0;
+        this.historySelectedDay = null;
+        this.historyTypeFilters = [];
+        this.historyMemberFilter = 'all';
+        this.historySearchOpen = false;
+        this.historySearchQuery = '';
+        // Live Walk State
+        this.activeWalk = null;
+        this.walkView = null;
+        this.walkHomeAsk = false;
+        this.homeAsked = false;
+        this.walkSummaryData = null;
         // Detect initial locale
         const storedLocale = localStorage.getItem('dooty_locale');
         if (storedLocale && (storedLocale === 'en' || storedLocale === 'ko')) {
@@ -137,6 +152,196 @@ class AppStateManager {
     }
     setActiveTab(tab) {
         this.activeTab = tab;
+        this.notify();
+    }
+    // --- Pet Switcher Methods ---
+    openPetSwitcher() {
+        this.petSwitcherOpen = true;
+        this.notify();
+    }
+    closePetSwitcher() {
+        this.petSwitcherOpen = false;
+        this.notify();
+    }
+    selectPetById(petId) {
+        const pet = this.pets.find((p) => p.id === petId);
+        if (pet) {
+            this.selectPet(pet);
+            this.closePetSwitcher();
+        }
+    }
+    // --- History Management Methods ---
+    setHistoryMonthOffset(offset) {
+        this.historyMonthOffset = offset;
+        this.historySelectedDay = null;
+        this.notify();
+    }
+    setHistorySelectedDay(day) {
+        this.historySelectedDay = day;
+        this.notify();
+    }
+    toggleHistoryTypeFilter(typeId) {
+        if (this.historyTypeFilters.includes(typeId)) {
+            this.historyTypeFilters = this.historyTypeFilters.filter((t) => t !== typeId);
+        }
+        else {
+            this.historyTypeFilters = [...this.historyTypeFilters, typeId];
+        }
+        this.notify();
+    }
+    setHistoryMemberFilter(member) {
+        this.historyMemberFilter = member;
+        this.notify();
+    }
+    clearHistoryFilters() {
+        this.historyTypeFilters = [];
+        this.historyMemberFilter = 'all';
+        this.historySearchQuery = '';
+        this.notify();
+    }
+    setHistorySearchOpen(open) {
+        this.historySearchOpen = open;
+        this.notify();
+    }
+    setHistorySearchQuery(query) {
+        this.historySearchQuery = query;
+        this.notify();
+    }
+    // --- Live Walk Tracking Methods ---
+    startLiveWalk(petIds) {
+        if (this.walkTimerInterval)
+            clearInterval(this.walkTimerInterval);
+        const chosenPetIds = petIds && petIds.length > 0 ? petIds : this.currentPet ? [this.currentPet.id] : [];
+        this.activeWalk = {
+            startTime: Date.now(),
+            pausedTotal: 0,
+            pausedAt: null,
+            route: [],
+            petIds: chosenPetIds,
+        };
+        this.walkView = 'live';
+        this.walkHomeAsk = false;
+        this.homeAsked = false;
+        this.walkSummaryData = null;
+        this.notify();
+        // Start tick interval
+        this.walkTimerInterval = setInterval(() => {
+            if (!this.activeWalk || this.activeWalk.pausedAt)
+                return;
+            const sec = this.getWalkSeconds();
+            // Auto home check prompt after 25s (test mock) or geo arrival
+            if (!this.homeAsked && sec >= 120) {
+                this.walkHomeAsk = true;
+                this.homeAsked = true;
+            }
+            this.notify();
+        }, 1000);
+    }
+    getWalkSeconds() {
+        if (!this.activeWalk)
+            return 0;
+        const now = Date.now();
+        const held = this.activeWalk.pausedTotal + (this.activeWalk.pausedAt ? now - this.activeWalk.pausedAt : 0);
+        return Math.max(0, Math.floor((now - this.activeWalk.startTime - held) / 1000));
+    }
+    getWalkDistanceKm() {
+        const sec = this.getWalkSeconds();
+        return (sec / 3600 * 4.8).toFixed(2);
+    }
+    getWalkPace() {
+        const sec = this.getWalkSeconds();
+        if (sec < 60)
+            return "9'40\"";
+        const km = sec / 3600 * 4.8;
+        if (km <= 0)
+            return "9'40\"";
+        const paceMin = (sec / 60) / km;
+        const m = Math.floor(paceMin);
+        const s = Math.round((paceMin - m) * 60);
+        return `${m}'${String(s).padStart(2, '0')}"`;
+    }
+    pauseLiveWalk() {
+        if (!this.activeWalk)
+            return;
+        const now = Date.now();
+        if (this.activeWalk.pausedAt) {
+            // Resume
+            this.activeWalk.pausedTotal += (now - this.activeWalk.pausedAt);
+            this.activeWalk.pausedAt = null;
+        }
+        else {
+            // Pause
+            this.activeWalk.pausedAt = now;
+        }
+        this.notify();
+    }
+    minimizeWalk() {
+        this.walkView = null;
+        this.notify();
+    }
+    expandWalk() {
+        this.walkView = 'live';
+        this.notify();
+    }
+    keepWalking() {
+        this.walkHomeAsk = false;
+        this.notify();
+    }
+    endLiveWalk() {
+        if (this.walkTimerInterval)
+            clearInterval(this.walkTimerInterval);
+        if (!this.activeWalk)
+            return;
+        const sec = this.getWalkSeconds();
+        const km = parseFloat(this.getWalkDistanceKm());
+        const pace = this.getWalkPace();
+        const petNames = this.activeWalk.petIds
+            .map((id) => this.pets.find((p) => p.id === id)?.name)
+            .filter(Boolean);
+        const d0 = new Date(this.activeWalk.startTime);
+        const d1 = new Date();
+        const formatTime = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        this.walkSummaryData = {
+            durationSec: sec,
+            distanceKm: km,
+            pace,
+            route: this.activeWalk.route,
+            petNames: petNames.length > 0 ? petNames : [this.currentPet?.name || 'Pet'],
+            startTime: formatTime(d0),
+            endTime: formatTime(d1),
+        };
+        this.walkView = 'summary';
+        this.walkHomeAsk = false;
+        this.notify();
+    }
+    async saveLiveWalk(notes = '', photoUrl = '') {
+        if (!this.walkSummaryData)
+            return;
+        const data = this.walkSummaryData;
+        const minStr = Math.max(1, Math.round(data.durationSec / 60)) + ' min';
+        const kmStr = data.distanceKm + ' km';
+        // Log walk event
+        await this.logEvent('walk', notes || `Walk · ${minStr} · ${kmStr}`, {
+            walkDuration: minStr,
+            walkDistance: kmStr,
+            photoUrl,
+            petNames: data.petNames,
+        });
+        this.activeWalk = null;
+        this.walkView = null;
+        this.walkSummaryData = null;
+        this.walkHomeAsk = false;
+        this.homeAsked = false;
+        this.notify();
+    }
+    discardLiveWalk() {
+        if (this.walkTimerInterval)
+            clearInterval(this.walkTimerInterval);
+        this.activeWalk = null;
+        this.walkView = null;
+        this.walkSummaryData = null;
+        this.walkHomeAsk = false;
+        this.homeAsked = false;
         this.notify();
     }
     setAuthView(view) {

@@ -12,6 +12,95 @@ export class DootyDog extends LitElement {
       display: block;
       padding: 58px 18px 140px;
       box-sizing: border-box;
+      animation: tb-screen 0.24s cubic-bezier(0.23, 1, 0.32, 1) both;
+    }
+
+    .top-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #FFF;
+      border: 3px solid #17140F;
+      border-radius: 17px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #17140F;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 #17140F;
+      user-select: none;
+      transition: transform 0.13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.13s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .back-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
+    .pet-switch-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #FFF;
+      border: 3px solid #17140F;
+      border-radius: 17px;
+      padding: 5px 10px 5px 5px;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 #17140F;
+      user-select: none;
+      transition: transform 0.13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.13s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .pet-switch-pill:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
+    .pet-dot-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid #17140F;
+      background: #FFCE2E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 11px;
+      color: #17140F;
+    }
+
+    .user-gear-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 3px solid #17140F;
+      background: #FFCE2E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 #17140F;
+      flex: none;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 16px;
+      color: #17140F;
+      user-select: none;
+      transition: transform 0.13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.13s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .user-gear-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #17140F;
     }
 
     .dog-hero-card {
@@ -25,6 +114,7 @@ export class DootyDog extends LitElement {
       align-items: center;
       margin-bottom: 14px;
     }
+
 
     .dog-avatar-wrapper {
       position: relative;
@@ -520,10 +610,31 @@ export class DootyDog extends LitElement {
         : defaultVets;
 
     const petAvatar = pet?.avatarUrl;
+    const userInitial = (appState.currentUser?.displayName || 'S').charAt(0).toUpperCase();
 
     return html`
+      <!-- Top Navigation Bar -->
+      <div class="top-bar-row">
+        <div class="back-btn" @click=${() => appState.setActiveTab('today')}>
+          <span>‹</span>
+          <span>${isKo ? '오늘' : 'Today'}</span>
+        </div>
+        <div style="flex: 1;"></div>
+        <div class="pet-switch-pill" @click=${() => appState.openPetSwitcher()}>
+          <div class="pet-dot-avatar">${petName.charAt(0).toUpperCase()}</div>
+          <span style="font-size: 12.5px; font-weight: 800; color: #17140F;">${petName}</span>
+          ${appState.pets.length > 1
+            ? html`<span style="font-size: 9px; color: #17140F; margin-left: 2px;">▼</span>`
+            : null}
+        </div>
+        <div class="user-gear-btn" @click=${() => appState.setActiveTab('settings')}>
+          ${userInitial}
+        </div>
+      </div>
+
       <!-- Pet Hero Card -->
       <div class="dog-hero-card">
+
         <div
           class="dog-avatar-wrapper"
           @click=${() =>

@@ -9,6 +9,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { appState } from '../state/appState.js';
 import './dooty-dock.js';
 import './dooty-home.js';
+import './dooty-history.js';
 import './dooty-numbers.js';
 import './dooty-map.js';
 import './dooty-dog.js';
@@ -20,6 +21,8 @@ import './dooty-importer.js';
 import './dooty-sheet.js';
 import './dooty-map-picker.js';
 import './dooty-photo-modal.js';
+import './dooty-pet-switcher.js';
+import './dooty-walk.js';
 import './dooty-auth.js';
 let DootyApp = class DootyApp extends LitElement {
     constructor() {
@@ -186,24 +189,29 @@ let DootyApp = class DootyApp extends LitElement {
             ? html `<dooty-auth></dooty-auth>`
             : this.activeView === 'today'
                 ? html `<dooty-home></dooty-home>`
-                : this.activeView === 'analytics'
-                    ? html `<dooty-numbers></dooty-numbers>`
-                    : this.activeView === 'map'
-                        ? html `<dooty-map></dooty-map>`
-                        : this.activeView === 'dog'
-                            ? html `<dooty-dog></dooty-dog>`
-                            : this.activeView === 'deep'
-                                ? html `<dooty-deep></dooty-deep>`
-                                : this.activeView === 'wrapped'
-                                    ? html `<dooty-wrapped></dooty-wrapped>`
-                                    : this.activeView === 'settings'
-                                        ? html `<dooty-settings></dooty-settings>`
-                                        : this.activeView === 'invite'
-                                            ? html `<dooty-invite></dooty-invite>`
-                                            : this.activeView === 'import'
-                                                ? html `<dooty-importer></dooty-importer>`
-                                                : html `<dooty-home></dooty-home>`}
+                : this.activeView === 'history'
+                    ? html `<dooty-history></dooty-history>`
+                    : this.activeView === 'analytics'
+                        ? html `<dooty-numbers></dooty-numbers>`
+                        : this.activeView === 'map'
+                            ? html `<dooty-map></dooty-map>`
+                            : this.activeView === 'dog'
+                                ? html `<dooty-dog></dooty-dog>`
+                                : this.activeView === 'deep'
+                                    ? html `<dooty-deep></dooty-deep>`
+                                    : this.activeView === 'wrapped'
+                                        ? html `<dooty-wrapped></dooty-wrapped>`
+                                        : this.activeView === 'settings'
+                                            ? html `<dooty-settings></dooty-settings>`
+                                            : this.activeView === 'invite'
+                                                ? html `<dooty-invite></dooty-invite>`
+                                                : this.activeView === 'import'
+                                                    ? html `<dooty-importer></dooty-importer>`
+                                                    : html `<dooty-home></dooty-home>`}
         </div>
+
+        <!-- Live Walk Overlay & Floating Banner Suite -->
+        ${isAuthenticated ? html `<dooty-walk></dooty-walk>` : null}
 
         <!-- Sticky Floating Dock (Pinned to bottom of device-shell, only when authenticated) -->
         ${showDock ? html `<dooty-dock></dooty-dock>` : null}
@@ -255,6 +263,9 @@ let DootyApp = class DootyApp extends LitElement {
 
         <!-- Sliding Log Sheet Modal (Covers viewport when opened) -->
         <dooty-sheet></dooty-sheet>
+
+        <!-- Pet Switcher Bottom Sheet Modal -->
+        <dooty-pet-switcher></dooty-pet-switcher>
 
         <!-- Photo & Avatar Customization Modal -->
         <dooty-photo-modal></dooty-photo-modal>

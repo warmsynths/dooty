@@ -27,13 +27,14 @@ export class DootyHome extends LitElement {
     }
 
     .dog-avatar-btn {
+      position: relative;
       width: 50px;
       height: 50px;
       border-radius: 50%;
       flex: none;
       border: 3px solid #17140F;
       background: #FFFFFF;
-      overflow: hidden;
+      overflow: visible;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -44,13 +45,43 @@ export class DootyHome extends LitElement {
       cursor: pointer;
       box-shadow: 3px 3px 0 #17140F;
       line-height: 1.15;
+      user-select: none;
+      transition: transform 0.13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.13s cubic-bezier(0.23, 1, 0.32, 1);
     }
 
-    .dog-avatar-btn img {
+    .dog-avatar-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
+    .dog-avatar-img {
       width: 100%;
       height: 100%;
+      border-radius: 50%;
       object-fit: cover;
       display: block;
+    }
+
+    .pet-chevron-badge {
+      position: absolute;
+      right: -3px;
+      bottom: -3px;
+      width: 21px;
+      height: 21px;
+      border-radius: 50%;
+      border: 2.5px solid #17140F;
+      background: #FFCE2E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pet-chevron-icon {
+      width: 0;
+      height: 0;
+      border-top: 5px solid #17140F;
+      border-left: 4.5px solid transparent;
+      border-right: 4.5px solid transparent;
     }
 
     .greeting-col {
@@ -77,28 +108,36 @@ export class DootyHome extends LitElement {
       margin-top: 1px;
     }
 
-    .hamburger-btn {
+    .user-initial-btn {
       width: 40px;
       height: 40px;
-      border-radius: 13px;
+      border-radius: 50%;
       border: 3px solid #17140F;
-      background: #FFF;
+      background: #FFCE2E;
       display: flex;
-      flex-direction: column;
-      gap: 3px;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       box-shadow: 3px 3px 0 #17140F;
       flex: none;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 16px;
+      color: #17140F;
+      user-select: none;
+      transition: transform 0.13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.13s cubic-bezier(0.23, 1, 0.32, 1);
     }
 
-    .ham-line {
-      width: 13px;
-      height: 2.5px;
-      background: #17140F;
-      border-radius: 3px;
+    .user-initial-btn:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 #17140F;
     }
+
+    .user-initial-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
 
     .sync-pill {
       display: inline-flex;
@@ -484,24 +523,25 @@ export class DootyHome extends LitElement {
     const avgPerDay = totalCount > 0 ? (totalCount / activeDays).toFixed(1) : '0.0';
 
     const petAvatar = appState.currentPet?.avatarUrl;
+    const userInitial = (appState.currentUser?.displayName || 'S').charAt(0).toUpperCase();
 
     return html`
       <!-- Top Header Row -->
       <div class="top-header-row">
         <div
           class="dog-avatar-btn"
-          @click=${() =>
-            this.dispatchEvent(
-              new CustomEvent('dooty-navigate', {
-                bubbles: true,
-                composed: true,
-                detail: 'dog',
-              })
-            )}
+          @click=${() => appState.openPetSwitcher()}
         >
           ${petAvatar
-            ? html`<img src="${petAvatar}" alt="Pet" />`
+            ? html`<img src="${petAvatar}" class="dog-avatar-img" alt="Pet" />`
             : html`<div>${isKo ? '강아지\n사진' : 'dog\npic'}</div>`}
+          ${appState.pets.length > 1
+            ? html`
+                <div class="pet-chevron-badge">
+                  <div class="pet-chevron-icon"></div>
+                </div>
+              `
+            : null}
         </div>
 
         <div class="greeting-col">
@@ -520,21 +560,13 @@ export class DootyHome extends LitElement {
         </div>
 
         <div
-          class="hamburger-btn"
-          @click=${() =>
-            this.dispatchEvent(
-              new CustomEvent('dooty-navigate', {
-                bubbles: true,
-                composed: true,
-                detail: 'settings',
-              })
-            )}
+          class="user-initial-btn"
+          @click=${() => appState.setActiveTab('settings')}
         >
-          <div class="ham-line"></div>
-          <div class="ham-line"></div>
-          <div class="ham-line"></div>
+          ${userInitial}
         </div>
       </div>
+
 
       <!-- Streak & Next Prediction Card -->
       <div class="prediction-card">

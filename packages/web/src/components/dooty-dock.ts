@@ -99,25 +99,6 @@ export class DootyDock extends LitElement {
       background: #17140F;
     }
 
-    /* Numbers Icon */
-    .icon-numbers {
-      display: flex;
-      align-items: flex-end;
-      gap: 2.5px;
-      height: 16px;
-      flex: none;
-    }
-
-    .bar {
-      width: 4px;
-      background: #17140F;
-      border-radius: 2px;
-    }
-
-    .bar-1 { height: 8px; }
-    .bar-2 { height: 16px; }
-    .bar-3 { height: 11px; }
-
     /* Map Icon */
     .icon-map-wrap {
       width: 16px;
@@ -148,50 +129,47 @@ export class DootyDock extends LitElement {
       background: #17140F;
     }
 
-    /* Dog Icon */
-    .icon-dog {
-      width: 18px;
+    /* History 3x3 Grid Icon */
+    .icon-history {
+      width: 17px;
       height: 16px;
-      position: relative;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 1.5px;
       flex: none;
     }
 
-    .icon-dog-ear-left {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 6.5px;
-      height: 9px;
-      border: 2.5px solid #17140F;
-      border-radius: 60% 40% 45% 45%;
-      background: #FFF;
-      box-sizing: border-box;
+    .grid-cell {
+      border-radius: 1px;
     }
 
-    .icon-dog-ear-right {
-      position: absolute;
-      right: 0;
-      top: 0;
-      width: 6.5px;
-      height: 9px;
-      border: 2.5px solid #17140F;
-      border-radius: 40% 60% 45% 45%;
-      background: #FFF;
-      box-sizing: border-box;
+    .grid-cell.dark {
+      background: #17140F;
     }
 
-    .icon-dog-muzzle {
-      position: relative;
-      width: 12px;
-      height: 11px;
-      border: 2.5px solid #17140F;
-      border-radius: 45% 45% 50% 50%;
-      background: #FFF;
-      box-sizing: border-box;
+    .grid-cell.muted {
+      background: #C9C0AE;
     }
+
+    /* Numbers Icon */
+    .icon-numbers {
+      display: flex;
+      align-items: flex-end;
+      gap: 2.5px;
+      height: 16px;
+      flex: none;
+    }
+
+    .bar {
+      width: 4px;
+      background: #17140F;
+      border-radius: 2px;
+    }
+
+    .bar-1 { height: 8px; }
+    .bar-2 { height: 16px; }
+    .bar-3 { height: 11px; }
 
     /* Central Elevated Log FAB */
     .fab-btn {
@@ -223,6 +201,14 @@ export class DootyDock extends LitElement {
     .fab-btn:active {
       transform: translate(2px, 2px);
       box-shadow: 1px 2px 0 #17140F;
+    }
+
+    .fab-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      animation: tb-breathe 3.2s ease-in-out infinite;
     }
 
     .fab-l1 {
@@ -259,7 +245,6 @@ export class DootyDock extends LitElement {
 
   render() {
     const isKo = appState.currentLocale === 'ko';
-    const petName = appState.currentPet?.name || (isKo ? '반려견' : 'Pet');
     const active = appState.activeTab;
 
     return html`
@@ -275,31 +260,7 @@ export class DootyDock extends LitElement {
           <div class="dock-label">${isKo ? '오늘' : 'Today'}</div>
         </div>
 
-        <!-- 2. Numbers Tab -->
-        <div
-          class="dock-tab ${active === 'analytics' ? 'active' : ''}"
-          @click=${() => appState.setActiveTab('analytics')}
-        >
-          <div class="icon-numbers">
-            <div class="bar bar-1"></div>
-            <div class="bar bar-2"></div>
-            <div class="bar bar-3"></div>
-          </div>
-          <div class="dock-label">${isKo ? '숫자' : 'Numbers'}</div>
-        </div>
-
-        <!-- 3. Center Elevated Log FAB Button -->
-        <div
-          class="fab-btn"
-          @click=${() => appState.openLogger()}
-          title=${isKo ? '기록하기' : 'Log event'}
-        >
-          <div class="fab-l1"></div>
-          <div class="fab-l2"></div>
-          <div class="fab-l3"></div>
-        </div>
-
-        <!-- 4. Map Tab -->
+        <!-- 2. Map Tab -->
         <div
           class="dock-tab ${active === 'map' ? 'active' : ''}"
           @click=${() => appState.setActiveTab('map')}
@@ -312,19 +273,52 @@ export class DootyDock extends LitElement {
           <div class="dock-label">${isKo ? '지도' : 'Map'}</div>
         </div>
 
-        <!-- 5. Dog Tab -->
+        <!-- 3. Center Elevated Log FAB Button -->
         <div
-          class="dock-tab ${active === 'dog' ? 'active' : ''}"
-          @click=${() => appState.setActiveTab('dog')}
+          class="fab-btn"
+          @click=${() => appState.openLogger()}
+          title=${isKo ? '기록하기' : 'Log event'}
         >
-          <div class="icon-dog">
-            <div class="icon-dog-ear-left"></div>
-            <div class="icon-dog-ear-right"></div>
-            <div class="icon-dog-muzzle"></div>
+          <div class="fab-inner">
+            <div class="fab-l1"></div>
+            <div class="fab-l2"></div>
+            <div class="fab-l3"></div>
           </div>
-          <div class="dock-label">${petName}</div>
+        </div>
+
+        <!-- 4. History Tab -->
+        <div
+          class="dock-tab ${active === 'history' ? 'active' : ''}"
+          @click=${() => appState.setActiveTab('history')}
+        >
+          <div class="icon-history">
+            <div class="grid-cell dark"></div>
+            <div class="grid-cell dark"></div>
+            <div class="grid-cell muted"></div>
+            <div class="grid-cell dark"></div>
+            <div class="grid-cell muted"></div>
+            <div class="grid-cell dark"></div>
+            <div class="grid-cell muted"></div>
+            <div class="grid-cell dark"></div>
+            <div class="grid-cell dark"></div>
+          </div>
+          <div class="dock-label">${isKo ? '기록' : 'History'}</div>
+        </div>
+
+        <!-- 5. Numbers Tab -->
+        <div
+          class="dock-tab ${active === 'analytics' ? 'active' : ''}"
+          @click=${() => appState.setActiveTab('analytics')}
+        >
+          <div class="icon-numbers">
+            <div class="bar bar-1"></div>
+            <div class="bar bar-2"></div>
+            <div class="bar bar-3"></div>
+          </div>
+          <div class="dock-label">${isKo ? '숫자' : 'Numbers'}</div>
         </div>
       </div>
     `;
   }
 }
+

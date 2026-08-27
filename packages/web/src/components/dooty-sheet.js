@@ -35,6 +35,7 @@ let DootySheet = class DootySheet extends LitElement {
         this.showMapPicker = false;
         this.showTimePicker = false;
         this.customTimestamp = '';
+        this.walkPetIds = [];
         this.weatherText = '';
         this.isFetchingWeather = false;
         this.wasOpen = false;
@@ -125,6 +126,7 @@ let DootySheet = class DootySheet extends LitElement {
         this.unsubscribe = appState.subscribe(() => {
             if (appState.loggerModalOpen) {
                 if (!this.wasOpen) {
+                    this.walkPetIds = appState.currentPet ? [appState.currentPet.id] : [];
                     // Just opened
                     if (appState.editingEvent) {
                         const evt = appState.editingEvent;
@@ -892,12 +894,167 @@ let DootySheet = class DootySheet extends LitElement {
       color: #6A6152;
     }
 
+    /* Start Walk Button & Who's coming */
+    .start-walk-btn {
+      background: #1FC99B;
+      border: 3px solid #17140F;
+      border-radius: 22px;
+      padding: 15px 16px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 #17140F;
+      user-select: none;
+      box-sizing: border-box;
+      transition: transform 0.13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.13s cubic-bezier(0.23, 1, 0.32, 1), background-color 0.16s ease;
+    }
+
+    .start-walk-btn:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 6px 6px 0 #17140F;
+    }
+
+    .start-walk-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #17140F;
+    }
+
+    .play-icon-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid #17140F;
+      background: #FFF;
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-left: 4px;
+      box-sizing: border-box;
+    }
+
+    .play-triangle {
+      width: 0;
+      height: 0;
+      border-left: 14px solid #17140F;
+      border-top: 9px solid transparent;
+      border-bottom: 9px solid transparent;
+    }
+
+    .start-walk-title {
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
+      font-weight: 800;
+      font-size: 19px;
+      color: #17140F;
+      letter-spacing: -0.5px;
+    }
+
+    .start-walk-sub {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #0A5A45;
+      margin-top: 1px;
+    }
+
+    .who-chips-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .who-pet-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #FFF;
+      border: 3px solid #17140F;
+      border-radius: 18px;
+      padding: 7px 12px 7px 7px;
+      cursor: pointer;
+      box-shadow: 3px 3px 0 #17140F;
+      transition: transform 0.13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.13s cubic-bezier(0.23, 1, 0.32, 1);
+      user-select: none;
+    }
+
+    .who-pet-chip.active {
+      background: #FFCE2E;
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
+    .who-pet-chip:active {
+      transform: scale(0.965);
+    }
+
+    .who-pet-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2.5px solid #17140F;
+      background: #FFF;
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
+      font-weight: 800;
+      font-size: 12px;
+      color: #17140F;
+    }
+
+    .who-pet-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #17140F;
+    }
+
+    .who-tick-circle {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2.5px solid #17140F;
+      background: #FFF;
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 800;
+      color: #17140F;
+    }
+
+    .who-pet-chip.active .who-tick-circle {
+      background: #17140F;
+      color: #FFCE2E;
+    }
+
+    .walk-or-divider {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 4px 0;
+    }
+
+    .walk-or-line {
+      flex: 1;
+      height: 2.5px;
+      background: #E3D8BE;
+    }
+
+    .walk-or-text {
+      font-size: 8.5px;
+      font-weight: 800;
+      color: #9A9080;
+      letter-spacing: 1.1px;
+    }
+
     /* Mood on Delivery & Pills */
     .wrap-pill-row {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
     }
+
 
     .mood-pill {
       border-radius: 14px;
@@ -1754,30 +1911,95 @@ let DootySheet = class DootySheet extends LitElement {
                         `
                 : null}
 
-                    <!-- 5. Walk Duration (Walk) -->
+                    <!-- 5. Walk (Live tracking & Quick logs) -->
                     ${showWalk
                 ? html `
-                          <div>
-                            <div class="section-lbl" style="margin-bottom: 10px;">
-                              ${isKo ? '산책 시간 & 거리' : 'How long'}
+                          <div style="display: flex; flex-direction: column; gap: 14px;">
+                            <!-- Start Live Walk Button -->
+                            <div
+                              class="start-walk-btn"
+                              @click=${() => {
+                    appState.closeLogger();
+                    appState.startLiveWalk(this.walkPetIds);
+                }}
+                            >
+                              <div class="play-icon-circle">
+                                <div class="play-triangle"></div>
+                              </div>
+                              <div style="flex: 1; min-width: 0;">
+                                <div class="start-walk-title">${isKo ? '지금 산책 시작' : 'Start walk now'}</div>
+                                <div class="start-walk-sub">${isKo ? '시간 측정 및 경로 기록' : 'Times it and traces the route'}</div>
+                              </div>
                             </div>
-                            <div class="walk-row">
-                              ${this.walkOptions.map((w) => html `
-                                  <div
-                                    class="walk-btn ${this.walkMin === w.min ? 'active' : ''}"
-                                    @click=${() => {
+
+                            <!-- Who's Coming Multi-Pet Selector -->
+                            ${appState.pets.length > 1
+                    ? html `
+                                  <div>
+                                    <div class="section-lbl" style="margin-bottom: 9px;">
+                                      ${isKo ? '누가 가나요?' : "Who's coming"}
+                                    </div>
+                                    <div class="who-chips-row">
+                                      ${appState.pets.map((p) => {
+                        const isSelected = this.walkPetIds.includes(p.id);
+                        return html `
+                                          <div
+                                            class="who-pet-chip ${isSelected ? 'active' : ''}"
+                                            @click=${() => {
+                            if (isSelected) {
+                                if (this.walkPetIds.length > 1) {
+                                    this.walkPetIds = this.walkPetIds.filter((id) => id !== p.id);
+                                }
+                            }
+                            else {
+                                this.walkPetIds = [...this.walkPetIds, p.id];
+                            }
+                        }}
+                                          >
+                                            <div class="who-pet-avatar">${p.name.charAt(0).toUpperCase()}</div>
+                                            <div class="who-pet-name">${p.name}</div>
+                                            <div class="who-tick-circle">${isSelected ? '✓' : ''}</div>
+                                          </div>
+                                        `;
+                    })}
+                                    </div>
+                                  </div>
+                                `
+                    : null}
+
+                            <!-- Divider -->
+                            <div class="walk-or-divider">
+                              <div class="walk-or-line"></div>
+                              <div class="walk-or-text">
+                                ${isKo ? '또는 이미 완료한 산책 기록' : 'OR LOG ONE YOU ALREADY DID'}
+                              </div>
+                              <div class="walk-or-line"></div>
+                            </div>
+
+                            <!-- Manual Walk Duration Selector -->
+                            <div>
+                              <div class="section-lbl" style="margin-bottom: 10px;">
+                                ${isKo ? '산책 시간' : 'How long'}
+                              </div>
+                              <div class="walk-row">
+                                ${this.walkOptions.map((w) => html `
+                                    <div
+                                      class="walk-btn ${this.walkMin === w.min ? 'active' : ''}"
+                                      @click=${() => {
                     this.walkMin = w.min;
                     this.walkKm = w.km;
                 }}
-                                  >
-                                    <div class="walk-min">${isKo ? w.minKo : w.min}</div>
-                                    <div class="walk-km">${w.km}</div>
-                                  </div>
-                                `)}
+                                    >
+                                      <div class="walk-min">${isKo ? w.minKo : w.min}</div>
+                                      <div class="walk-km">${w.km}</div>
+                                    </div>
+                                  `)}
+                              </div>
                             </div>
                           </div>
                         `
                 : null}
+
 
                     <!-- 6. Vet Visit Reason (Vet) -->
                     ${showVet
@@ -2094,6 +2316,9 @@ __decorate([
 __decorate([
     state()
 ], DootySheet.prototype, "customTimestamp", void 0);
+__decorate([
+    state()
+], DootySheet.prototype, "walkPetIds", void 0);
 __decorate([
     state()
 ], DootySheet.prototype, "weatherText", void 0);
