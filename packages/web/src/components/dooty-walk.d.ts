@@ -3,6 +3,7 @@ export declare class DootyWalk extends LitElement {
     private unsubscribe?;
     private notes;
     private photoUrl;
+    private isSaving;
     static styles: import("lit").CSSResult;
     connectedCallback(): void;
     disconnectedCallback(): void;

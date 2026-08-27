@@ -8,6 +8,7 @@ export class DootyWalk extends LitElement {
 
   @state() private notes: string = '';
   @state() private photoUrl: string = '';
+  @state() private isSaving: boolean = false;
 
   static styles = css`
     :host {
@@ -282,6 +283,29 @@ export class DootyWalk extends LitElement {
     .end-btn:active {
       transform: translate(2px, 2px);
       box-shadow: 1px 1px 0 #17140F;
+    }
+
+    .end-btn.is-loading {
+      background: #E84E32;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: not-allowed;
+      pointer-events: none;
+      transform: translate(1px, 1px);
+      box-shadow: 2px 2px 0 #17140F;
+    }
+
+    .end-btn .btn-spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      display: inline-block;
+      flex: none;
     }
 
     /* Arrived Home Sheet */
@@ -735,10 +759,15 @@ export class DootyWalk extends LitElement {
               <!-- Bottom Save Button -->
               <div class="save-bottom-bar">
                 <div
-                  class="end-btn"
+                  class="end-btn ${this.isSaving ? 'is-loading' : ''}"
                   @click=${() => this.handleSave()}
                 >
-                  ${isKo ? '산책 저장' : 'Save walk'}
+                  ${this.isSaving
+                    ? html`
+                        <div class="btn-spinner"></div>
+                        <span>${isKo ? '산책 저장 중...' : 'Saving walk...'}</span>
+                      `
+                    : (isKo ? '산책 저장' : 'Save walk')}
                 </div>
               </div>
             </div>
@@ -748,22 +777,30 @@ export class DootyWalk extends LitElement {
   }
 
   private async handleSave() {
-    const isKo = appState.currentLocale === 'ko';
-    const summary = appState.walkSummaryData;
-    const petNames = summary?.petNames.join(' & ') || (isKo ? '반려견' : 'Pet');
-    const kmStr = summary?.distanceKm ? `${summary.distanceKm} km` : 'Walk';
+    if (this.isSaving) return;
+    this.isSaving = true;
+    try {
+      const isKo = appState.currentLocale === 'ko';
+      const summary = appState.walkSummaryData;
+      const petNames = summary?.petNames.join(' & ') || (isKo ? '반려견' : 'Pet');
+      const kmStr = summary?.distanceKm ? `${summary.distanceKm} km` : 'Walk';
 
-    await appState.saveLiveWalk(this.notes, this.photoUrl);
-    this.dispatchEvent(
-      new CustomEvent('dooty-toast', {
-        bubbles: true,
-        composed: true,
-        detail: {
-          title: isKo ? '산책 기록 완료!' : 'Walk saved!',
-          sub: isKo ? `${petNames}와(과) 함께한 산책 (${kmStr})` : `${petNames}'s walk logged (${kmStr})`,
-        },
-      })
-    );
+      await appState.saveLiveWalk(this.notes, this.photoUrl);
+      this.dispatchEvent(
+        new CustomEvent('dooty-toast', {
+          bubbles: true,
+          composed: true,
+          detail: {
+            title: isKo ? '산책 기록 완료!' : 'Walk saved!',
+            sub: isKo ? `${petNames}와(과) 함께한 산책 (${kmStr})` : `${petNames}'s walk logged (${kmStr})`,
+          },
+        })
+      );
+    } catch (err) {
+      console.error('Failed to save walk:', err);
+    } finally {
+      this.isSaving = false;
+    }
   }
 }
 

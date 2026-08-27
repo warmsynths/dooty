@@ -1,5 +1,5 @@
 import { translations, } from '@dooty/shared';
-import { ApiClient } from '../api/client.js';
+import { ApiClient, onApiActivityChange } from '../api/client.js';
 import { getPendingEvents, getEventsOffline } from '../db/offlineStore.js';
 class AppStateManager {
     constructor() {
@@ -16,6 +16,8 @@ class AppStateManager {
         this.isOnline = navigator.onLine;
         this.pendingSyncCount = 0;
         this.isSyncing = false;
+        this.isApiActive = false;
+        this.activeApiRequests = 0;
         this.analyticsTimeRange = '30d';
         // User profile
         this.userAvatar = localStorage.getItem('dooty_user_avatar') || '';
@@ -130,6 +132,12 @@ class AppStateManager {
         // Network listeners
         window.addEventListener('online', () => this.handleNetworkChange(true));
         window.addEventListener('offline', () => this.handleNetworkChange(false));
+        // API activity listener for universal loading feedback
+        onApiActivityChange((count) => {
+            this.activeApiRequests = count;
+            this.isApiActive = count > 0;
+            this.notify();
+        });
     }
     subscribe(listener) {
         this.listeners.add(listener);

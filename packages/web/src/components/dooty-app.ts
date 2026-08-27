@@ -138,6 +138,71 @@ export class DootyApp extends LitElement {
       border: 2px solid #17140F;
       box-sizing: border-box;
     }
+
+    /* Universal Top API Activity Progress Bar */
+    .api-progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      z-index: 300;
+      background: linear-gradient(
+        90deg,
+        #FF5A3C 0%,
+        #FFCE2E 25%,
+        #1FC99B 50%,
+        #2B5BE8 75%,
+        #FF5A3C 100%
+      );
+      background-size: 200% 100%;
+      animation: api-bar-slide 0.85s linear infinite;
+      box-shadow: 0 1px 4px rgba(23, 20, 15, 0.25);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .api-progress-bar.active {
+      opacity: 1;
+    }
+
+    /* Floating Cloud Sync Pill */
+    .api-sync-badge {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 290;
+      background: #FFFFFF;
+      border: 2.5px solid #17140F;
+      border-radius: 20px;
+      padding: 5px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 3px 3px 0 #17140F;
+      pointer-events: none;
+      animation: api-pill-pop 0.28s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+    }
+
+    .api-sync-spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid #E2D9C8;
+      border-top-color: #FF5A3C;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      flex: none;
+    }
+
+    .api-sync-text {
+      font-size: 11px;
+      font-weight: 800;
+      color: #17140F;
+      letter-spacing: -0.2px;
+      font-family: var(--font-body);
+    }
   `;
 
   connectedCallback() {
@@ -185,6 +250,21 @@ export class DootyApp extends LitElement {
     return html`
       <!-- Outer Container -->
       <div class="device-shell">
+        <!-- Universal Top API Progress Bar -->
+        <div class="api-progress-bar ${appState.isApiActive ? 'active' : ''}"></div>
+
+        <!-- Floating Cloud Sync Status Pill -->
+        ${appState.isApiActive
+          ? html`
+              <div class="api-sync-badge">
+                <div class="api-sync-spinner"></div>
+                <span class="api-sync-text">
+                  ${appState.currentLocale === 'ko' ? '동기화 중...' : 'Syncing...'}
+                </span>
+              </div>
+            `
+          : null}
+
         <!-- Viewport -->
         <div class="device-viewport">
           ${!isAuthenticated

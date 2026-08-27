@@ -20,6 +20,8 @@ declare class AppStateManager {
     isOnline: boolean;
     pendingSyncCount: number;
     isSyncing: boolean;
+    isApiActive: boolean;
+    activeApiRequests: number;
     analyticsTimeRange: TimeRangeFilter;
     userAvatar: string;
     track: Record<string, boolean>;

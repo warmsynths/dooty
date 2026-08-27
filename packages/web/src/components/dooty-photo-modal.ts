@@ -590,43 +590,51 @@ export class DootyPhotoModal extends LitElement {
   }
 
   private async handleSave() {
-    const isKo = appState.currentLocale === 'ko';
-    const target = appState.photoModalTarget;
-    const targetId = appState.photoModalTargetId;
-    const finalUrl = this.previewUrl;
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+    try {
+      const isKo = appState.currentLocale === 'ko';
+      const target = appState.photoModalTarget;
+      const targetId = appState.photoModalTargetId;
+      const finalUrl = this.previewUrl;
 
-    if (target === 'pet') {
-      const petId = targetId || appState.currentPet?.id;
-      if (petId) {
-        await appState.updatePetProfile(petId, {
-          name: this.petName.trim() || appState.currentPet?.name || 'Pet',
-          breed: this.petBreed.trim() || appState.currentPet?.breed || '',
-          birthday: this.petBirthday || appState.currentPet?.birthday || '',
-          avatarUrl: finalUrl,
-        });
+      if (target === 'pet') {
+        const petId = targetId || appState.currentPet?.id;
+        if (petId) {
+          await appState.updatePetProfile(petId, {
+            name: this.petName.trim() || appState.currentPet?.name || 'Pet',
+            breed: this.petBreed.trim() || appState.currentPet?.breed || '',
+            birthday: this.petBirthday || appState.currentPet?.birthday || '',
+            avatarUrl: finalUrl,
+          });
+        }
+      } else if (target === 'user') {
+        await appState.updateUserAvatar(finalUrl);
+      } else if (target === 'member') {
+        if (targetId) {
+          await appState.updateMemberAvatar(targetId, finalUrl);
+        }
       }
-    } else if (target === 'user') {
-      await appState.updateUserAvatar(finalUrl);
-    } else if (target === 'member') {
-      if (targetId) {
-        await appState.updateMemberAvatar(targetId, finalUrl);
-      }
+
+      this.dispatchEvent(
+        new CustomEvent('dooty-toast', {
+          bubbles: true,
+          composed: true,
+          detail: {
+            title: target === 'pet'
+              ? (isKo ? `${this.petName || '반려견'} 프로필 저장됨` : `${this.petName || 'Pet'} Profile Saved`)
+              : (isKo ? '사진 업데이트됨' : 'Photo Updated'),
+            sub: isKo ? '변경사항이 성공적으로 적용되었습니다.' : 'Changes successfully saved.',
+          },
+        })
+      );
+
+      this.handleClose();
+    } catch (err: any) {
+      this.errorMessage = 'Failed to save: ' + (err.message || 'Unknown error');
+    } finally {
+      this.isProcessing = false;
     }
-
-    this.dispatchEvent(
-      new CustomEvent('dooty-toast', {
-        bubbles: true,
-        composed: true,
-        detail: {
-          title: target === 'pet'
-            ? (isKo ? `${this.petName || '반려견'} 프로필 저장됨` : `${this.petName || 'Pet'} Profile Saved`)
-            : (isKo ? '사진 업데이트됨' : 'Photo Updated'),
-          sub: isKo ? '변경사항이 성공적으로 적용되었습니다.' : 'Changes successfully saved.',
-        },
-      })
-    );
-
-    this.handleClose();
   }
 
   render() {
@@ -801,9 +809,9 @@ export class DootyPhotoModal extends LitElement {
               <button class="btn-clear" @click=${this.handleClose}>
                 ${isKo ? '취소' : 'Cancel'}
               </button>
-              <button class="btn-save" ?disabled=${this.isProcessing} @click=${this.handleSave}>
+              <button class="btn-save" ?disabled=${this.isProcessing} @click=${this.handleSave} style="display:flex; align-items:center; justify-content:center; gap:8px;">
                 ${this.isProcessing
-                  ? (isKo ? '저장 중...' : 'Saving...')
+                  ? html`<div class="btn-spinner" style="width:14px; height:14px; border-width:2px;"></div> <span>${isKo ? '저장 중...' : 'Saving...'}</span>`
                   : (isKo ? '저장하기' : 'Save Changes')}
               </button>
             </div>

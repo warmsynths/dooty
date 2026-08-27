@@ -27,6 +27,7 @@ export declare class DootySheet extends LitElement {
     private walkPetIds;
     private weatherText;
     private isFetchingWeather;
+    private isSaving;
     private unsubscribe?;
     private fileInput?;
     private wasOpen;

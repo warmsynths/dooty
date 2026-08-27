@@ -13,7 +13,7 @@ import {
   TimeRangeFilter,
   UpdateEventDTO,
 } from '@dooty/shared';
-import { ApiClient } from '../api/client.js';
+import { ApiClient, onApiActivityChange } from '../api/client.js';
 import { getPendingEvents, getEventsOffline } from '../db/offlineStore.js';
 
 type Listener = () => void;
@@ -42,6 +42,8 @@ class AppStateManager {
   isOnline: boolean = navigator.onLine;
   pendingSyncCount: number = 0;
   isSyncing: boolean = false;
+  isApiActive: boolean = false;
+  activeApiRequests: number = 0;
   analyticsTimeRange: TimeRangeFilter = '30d';
 
   // User profile
@@ -184,6 +186,13 @@ class AppStateManager {
     // Network listeners
     window.addEventListener('online', () => this.handleNetworkChange(true));
     window.addEventListener('offline', () => this.handleNetworkChange(false));
+
+    // API activity listener for universal loading feedback
+    onApiActivityChange((count) => {
+      this.activeApiRequests = count;
+      this.isApiActive = count > 0;
+      this.notify();
+    });
   }
 
   subscribe(listener: Listener): () => void {

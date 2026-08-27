@@ -293,8 +293,11 @@ let DootyLoggerModal = class DootyLoggerModal extends LitElement {
               class="dooty-btn save-btn"
               @click=${() => this.handleSave()}
               ?disabled=${this.isSaving}
+              style="display: flex; align-items: center; justify-content: center; gap: 8px;"
             >
-              ${this.isSaving ? t.saving : `${t.save} ${meta.emoji}`}
+              ${this.isSaving
+            ? html `<div class="btn-spinner" style="width:14px; height:14px; border-width:2px;"></div> <span>${t.saving}</span>`
+            : `${t.save} ${meta.emoji}`}
             </button>
           </div>
         </div>

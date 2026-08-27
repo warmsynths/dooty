@@ -43,6 +43,57 @@ function getApiBase(): string {
 
 const API_BASE = getApiBase();
 
+let activeRequestsCount = 0;
+const activityListeners = new Set<(count: number) => void>();
+let settleTimer: any = null;
+
+function notifyActivityListeners() {
+  const count = activeRequestsCount;
+  activityListeners.forEach((fn) => {
+    try {
+      fn(count);
+    } catch (e) {
+      console.error('API activity listener error:', e);
+    }
+  });
+}
+
+export function onApiActivityChange(listener: (count: number) => void): () => void {
+  activityListeners.add(listener);
+  listener(activeRequestsCount);
+  return () => {
+    activityListeners.delete(listener);
+  };
+}
+
+export function getActiveApiCount(): number {
+  return activeRequestsCount;
+}
+
+export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (settleTimer) {
+    clearTimeout(settleTimer);
+    settleTimer = null;
+  }
+  activeRequestsCount++;
+  notifyActivityListeners();
+  try {
+    const res = await fetch(input, init);
+    return res;
+  } finally {
+    activeRequestsCount = Math.max(0, activeRequestsCount - 1);
+    if (activeRequestsCount === 0) {
+      settleTimer = setTimeout(() => {
+        if (activeRequestsCount === 0) {
+          notifyActivityListeners();
+        }
+      }, 250);
+    } else {
+      notifyActivityListeners();
+    }
+  }
+}
+
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = localStorage.getItem('dooty_auth_token');
@@ -54,7 +105,7 @@ function getAuthHeaders(): Record<string, string> {
 
 export class ApiClient {
   static async signUp(dto: SignUpDTO): Promise<AuthSessionResponse> {
-    const res = await fetch(`${API_BASE}/auth/signup`, {
+    const res = await trackedFetch(`${API_BASE}/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
@@ -67,7 +118,7 @@ export class ApiClient {
   }
 
   static async signIn(dto: SignInDTO): Promise<AuthSessionResponse> {
-    const res = await fetch(`${API_BASE}/auth/signin`, {
+    const res = await trackedFetch(`${API_BASE}/auth/signin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
@@ -80,7 +131,7 @@ export class ApiClient {
   }
 
   static async getMe(): Promise<AuthSessionResponse> {
-    const res = await fetch(`${API_BASE}/auth/me`, {
+    const res = await trackedFetch(`${API_BASE}/auth/me`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) {
@@ -90,7 +141,7 @@ export class ApiClient {
   }
 
   static async joinAuthenticated(code: string, role?: string): Promise<AuthSessionResponse> {
-    const res = await fetch(`${API_BASE}/households/join-authenticated`, {
+    const res = await trackedFetch(`${API_BASE}/households/join-authenticated`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ code, role }),
@@ -103,7 +154,7 @@ export class ApiClient {
   }
 
   static async claimHousehold(householdId: string, role?: string): Promise<AuthSessionResponse> {
-    const res = await fetch(`${API_BASE}/households/claim`, {
+    const res = await trackedFetch(`${API_BASE}/households/claim`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ householdId, role }),
@@ -116,7 +167,7 @@ export class ApiClient {
   }
 
   static async createHousehold(data: CreateHouseholdDTO): Promise<Household> {
-    const res = await fetch(`${API_BASE}/households`, {
+    const res = await trackedFetch(`${API_BASE}/households`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -129,7 +180,7 @@ export class ApiClient {
   }
 
   static async getHousehold(householdId: string): Promise<Household> {
-    const res = await fetch(`${API_BASE}/households/${householdId}`, {
+    const res = await trackedFetch(`${API_BASE}/households/${householdId}`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch household');
@@ -137,7 +188,7 @@ export class ApiClient {
   }
 
   static async removeMember(householdId: string, memberId: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/households/${householdId}/members/${memberId}`, {
+    const res = await trackedFetch(`${API_BASE}/households/${householdId}/members/${memberId}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
@@ -145,7 +196,7 @@ export class ApiClient {
   }
 
   static async createInviteCode(householdId: string): Promise<{ code: string; expiresAt: string }> {
-    const res = await fetch(`${API_BASE}/households/${householdId}/invites`, {
+    const res = await trackedFetch(`${API_BASE}/households/${householdId}/invites`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
@@ -154,7 +205,7 @@ export class ApiClient {
   }
 
   static async joinHousehold(code: string, displayName: string, role?: string): Promise<Household> {
-    const res = await fetch(`${API_BASE}/households/join`, {
+    const res = await trackedFetch(`${API_BASE}/households/join`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ code, displayName, role }),
@@ -167,7 +218,7 @@ export class ApiClient {
   }
 
   static async getPets(householdId: string): Promise<Pet[]> {
-    const res = await fetch(`${API_BASE}/households/${householdId}/pets`, {
+    const res = await trackedFetch(`${API_BASE}/households/${householdId}/pets`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch pets');
@@ -175,7 +226,7 @@ export class ApiClient {
   }
 
   static async updatePet(petId: string, data: Partial<Pet>): Promise<Pet> {
-    const res = await fetch(`${API_BASE}/pets/${petId}`, {
+    const res = await trackedFetch(`${API_BASE}/pets/${petId}`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -189,7 +240,7 @@ export class ApiClient {
     memberId: string,
     data: { displayName?: string; avatarUrl?: string; role?: string }
   ): Promise<any> {
-    const res = await fetch(`${API_BASE}/households/${householdId}/members/${memberId}`, {
+    const res = await trackedFetch(`${API_BASE}/households/${householdId}/members/${memberId}`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -213,7 +264,7 @@ export class ApiClient {
 
       const qs = params.toString();
       const url = qs ? `${API_BASE}/pets/${petId}/events?${qs}` : `${API_BASE}/pets/${petId}/events`;
-      const res = await fetch(url, {
+      const res = await trackedFetch(url, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch events from server');
@@ -330,7 +381,7 @@ export class ApiClient {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/events`, {
+      const res = await trackedFetch(`${API_BASE}/events`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(dto),
@@ -381,7 +432,7 @@ export class ApiClient {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/events/${eventId}`, {
+      const res = await trackedFetch(`${API_BASE}/events/${eventId}`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify(updates),
@@ -401,7 +452,7 @@ export class ApiClient {
     if (!navigator.onLine) return;
 
     try {
-      const res = await fetch(`${API_BASE}/events/${eventId}`, {
+      const res = await trackedFetch(`${API_BASE}/events/${eventId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
@@ -420,7 +471,7 @@ export class ApiClient {
 
     try {
       const dtos = pending.map((p) => p.dto);
-      const res = await fetch(`${API_BASE}/events/batch-sync`, {
+      const res = await trackedFetch(`${API_BASE}/events/batch-sync`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ events: dtos }),
@@ -445,7 +496,7 @@ export class ApiClient {
 
     for (let i = 0; i < events.length; i += chunkSize) {
       const chunk = events.slice(i, i + chunkSize);
-      let res = await fetch(`${API_BASE}/import/events`, {
+      let res = await trackedFetch(`${API_BASE}/import/events`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ events: chunk }),
@@ -453,7 +504,7 @@ export class ApiClient {
 
       // Fallback if worker cache or route hasn't refreshed
       if (res.status === 404) {
-        res = await fetch(`${API_BASE}/events/batch-sync`, {
+        res = await trackedFetch(`${API_BASE}/events/batch-sync`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ events: chunk }),
@@ -476,7 +527,7 @@ export class ApiClient {
     petId: string,
     items: DogNotesImportItem[]
   ): Promise<{ importedCount: number }> {
-    const res = await fetch(`${API_BASE}/import/dognotes`, {
+    const res = await trackedFetch(`${API_BASE}/import/dognotes`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ householdId, petId, items }),
@@ -495,7 +546,7 @@ export class ApiClient {
     const qs = params.toString();
     const url = qs ? `${API_BASE}/pets/${petId}/analytics?${qs}` : `${API_BASE}/pets/${petId}/analytics`;
 
-    const res = await fetch(url, {
+    const res = await trackedFetch(url, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch analytics');
@@ -503,7 +554,7 @@ export class ApiClient {
   }
 
   static async saveWalkRoute(walk: Partial<WalkRoute>): Promise<WalkRoute> {
-    const res = await fetch(`${API_BASE}/walks`, {
+    const res = await trackedFetch(`${API_BASE}/walks`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(walk),
@@ -513,7 +564,7 @@ export class ApiClient {
   }
 
   static async getWalkRoutes(petId: string): Promise<WalkRoute[]> {
-    const res = await fetch(`${API_BASE}/pets/${petId}/walks`, {
+    const res = await trackedFetch(`${API_BASE}/pets/${petId}/walks`, {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch walk routes');

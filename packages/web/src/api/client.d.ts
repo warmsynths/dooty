@@ -1,4 +1,7 @@
 import { Household, Pet, PetEvent, CreateEventDTO, UpdateEventDTO, CreateHouseholdDTO, PetAnalytics, DogNotesImportItem, WalkRoute, SignUpDTO, SignInDTO, AuthSessionResponse, GetEventsQuery } from '@dooty/shared';
+export declare function onApiActivityChange(listener: (count: number) => void): () => void;
+export declare function getActiveApiCount(): number;
+export declare function trackedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
 export declare class ApiClient {
     static signUp(dto: SignUpDTO): Promise<AuthSessionResponse>;
     static signIn(dto: SignInDTO): Promise<AuthSessionResponse>;

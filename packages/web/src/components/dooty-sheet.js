@@ -38,6 +38,7 @@ let DootySheet = class DootySheet extends LitElement {
         this.walkPetIds = [];
         this.weatherText = '';
         this.isFetchingWeather = false;
+        this.isSaving = false;
         this.wasOpen = false;
         this.consNames = [
             'hard pellets',
@@ -1170,6 +1171,28 @@ let DootySheet = class DootySheet extends LitElement {
       box-shadow: 1px 1px 0 #17140F;
     }
 
+    .log-submit-btn.is-loading {
+      background: #E84E32;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: not-allowed;
+      transform: translate(1px, 1px);
+      box-shadow: 2px 2px 0 #17140F;
+    }
+
+    .btn-spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      display: inline-block;
+      flex: none;
+    }
+
     .log-delete-btn {
       background: #FFF;
       border: 3px solid #E02424;
@@ -1592,24 +1615,35 @@ let DootySheet = class DootySheet extends LitElement {
             toastTitle = isKo ? '식사 기록 완료' : 'Meal recorded';
             toastSub = `${portionLabel}`;
         }
-        if (appState.editingEvent) {
-            await appState.updateEvent(appState.editingEvent.id, type, summaryNotes, metadata, this.lat, this.lng, finalTimestamp);
-            toastTitle = isKo ? '기록 수정 완료!' : 'Entry updated!';
-            toastSub = isKo ? '수정사항이 저장되었습니다.' : 'Changes saved.';
+        if (this.isSaving)
+            return;
+        this.isSaving = true;
+        try {
+            if (appState.editingEvent) {
+                await appState.updateEvent(appState.editingEvent.id, type, summaryNotes, metadata, this.lat, this.lng, finalTimestamp);
+                toastTitle = isKo ? '기록 수정 완료!' : 'Entry updated!';
+                toastSub = isKo ? '수정사항이 저장되었습니다.' : 'Changes saved.';
+            }
+            else {
+                await appState.logEvent(type, summaryNotes, metadata, this.lat, this.lng, finalTimestamp);
+            }
+            this.close();
+            // Trigger celebratory toast & confetti burst
+            this.dispatchEvent(new CustomEvent('dooty-toast', {
+                bubbles: true,
+                composed: true,
+                detail: {
+                    title: toastTitle,
+                    sub: toastSub,
+                },
+            }));
         }
-        else {
-            await appState.logEvent(type, summaryNotes, metadata, this.lat, this.lng, finalTimestamp);
+        catch (err) {
+            console.error('Error saving event:', err);
         }
-        this.close();
-        // Trigger celebratory toast & confetti burst
-        this.dispatchEvent(new CustomEvent('dooty-toast', {
-            bubbles: true,
-            composed: true,
-            detail: {
-                title: toastTitle,
-                sub: toastSub,
-            },
-        }));
+        finally {
+            this.isSaving = false;
+        }
     }
     async handleDelete() {
         if (!appState.editingEvent)
@@ -2217,6 +2251,8 @@ let DootySheet = class DootySheet extends LitElement {
                 ? html `
                         <button
                           class="log-delete-btn"
+                          ?disabled=${this.isSaving}
+                          style="${this.isSaving ? 'opacity: 0.5; pointer-events: none;' : ''}"
                           @click=${() => this.handleDelete()}
                           title=${isKo ? '기록 삭제' : 'Delete log'}
                         >
@@ -2224,10 +2260,19 @@ let DootySheet = class DootySheet extends LitElement {
                         </button>
                       `
                 : null}
-                  <div class="log-submit-btn" style="flex: 1;" @click=${() => this.handleSave()}>
-                    ${isEditing
-                ? isKo ? '수정 완료!' : 'Save changes'
-                : isKo ? '기록하기!' : 'Log it!'}
+                  <div
+                    class="log-submit-btn ${this.isSaving ? 'is-loading' : ''}"
+                    style="flex: 1; ${this.isSaving ? 'pointer-events: none;' : ''}"
+                    @click=${() => this.handleSave()}
+                  >
+                    ${this.isSaving
+                ? html `
+                          <div class="btn-spinner"></div>
+                          <span>${isEditing ? (isKo ? '수정 저장 중...' : 'Saving...') : (isKo ? '기록 중...' : 'Logging...')}</span>
+                        `
+                : (isEditing
+                    ? isKo ? '수정 완료!' : 'Save changes'
+                    : isKo ? '기록하기!' : 'Log it!')}
                   </div>
                 </div>
               `
@@ -2325,6 +2370,9 @@ __decorate([
 __decorate([
     state()
 ], DootySheet.prototype, "isFetchingWeather", void 0);
+__decorate([
+    state()
+], DootySheet.prototype, "isSaving", void 0);
 DootySheet = __decorate([
     customElement('dooty-sheet')
 ], DootySheet);
