@@ -1,4 +1,4 @@
-import { enqueuePendingEvent, getPendingEvents, removePendingEvent, replacePendingEventWithServerEvent, saveEventsOffline, getEventsOffline, deleteEventOffline, updateEventOffline, getLastSyncTimestamp, setLastSyncTimestamp, } from '../db/offlineStore.js';
+import { enqueuePendingEvent, getPendingEvents, removePendingEvent, replacePendingEventWithServerEvent, saveEventsOffline, getEventsOffline, deleteEventOffline, updateEventOffline, getLastSyncTimestamp, setLastSyncTimestamp, clearLastSyncTimestamp, } from '../db/offlineStore.js';
 const DEFAULT_BFF_URL = 'https://watslog-bff.warmsynthsiloveyou.workers.dev/api';
 function getApiBase() {
     const envUrl = import.meta.env?.VITE_API_URL;
@@ -445,10 +445,9 @@ export class ApiClient {
                     await saveEventsOffline(syncedEvents.slice(pending.length));
                 }
                 const petIds = Array.from(new Set(pending.map((p) => p.dto.petId)));
-                const syncStartTime = new Date().toISOString();
                 for (const petId of petIds) {
                     if (petId) {
-                        await setLastSyncTimestamp(petId, syncStartTime);
+                        await clearLastSyncTimestamp(petId);
                     }
                 }
                 return pending.length;

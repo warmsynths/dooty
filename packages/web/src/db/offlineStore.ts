@@ -104,6 +104,15 @@ export async function setLastSyncTimestamp(petId: string, timestamp: string): Pr
   }
 }
 
+export async function clearLastSyncTimestamp(petId: string): Promise<void> {
+  try {
+    const db = await getOfflineDB();
+    await db.delete('meta', `last_sync_${petId}`);
+  } catch (err) {
+    console.warn('Failed to clear last sync timestamp:', err);
+  }
+}
+
 export async function clearOfflineEvents(petId?: string): Promise<void> {
   try {
     const db = await getOfflineDB();

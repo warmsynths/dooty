@@ -31,6 +31,7 @@ export declare function getEventsOffline(petId: string, options?: {
 }): Promise<PetEvent[]>;
 export declare function getLastSyncTimestamp(petId: string): Promise<string | null>;
 export declare function setLastSyncTimestamp(petId: string, timestamp: string): Promise<void>;
+export declare function clearLastSyncTimestamp(petId: string): Promise<void>;
 export declare function clearOfflineEvents(petId?: string): Promise<void>;
 export declare function enqueuePendingEvent(dto: CreateEventDTO): Promise<string>;
 export declare function getPendingEvents(): Promise<{

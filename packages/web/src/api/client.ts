@@ -24,6 +24,7 @@ import {
   updateEventOffline,
   getLastSyncTimestamp,
   setLastSyncTimestamp,
+  clearLastSyncTimestamp,
 } from '../db/offlineStore.js';
 
 const DEFAULT_BFF_URL = 'https://watslog-bff.warmsynthsiloveyou.workers.dev/api';
@@ -496,10 +497,9 @@ export class ApiClient {
         }
 
         const petIds = Array.from(new Set(pending.map((p) => p.dto.petId)));
-        const syncStartTime = new Date().toISOString();
         for (const petId of petIds) {
           if (petId) {
-            await setLastSyncTimestamp(petId, syncStartTime);
+            await clearLastSyncTimestamp(petId);
           }
         }
 
