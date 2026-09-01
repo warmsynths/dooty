@@ -39,6 +39,20 @@ export async function getEventsOffline(petId, options) {
     try {
         const db = await getOfflineDB();
         let all = await db.getAllFromIndex('events', 'by-pet', petId);
+        // Auto-recover orphaned local/pending events created under temporary guest IDs
+        const allStoreEvts = await db.getAll('events');
+        const orphans = allStoreEvts.filter((e) => e.petId !== petId && (e.isOfflinePending || e.id.startsWith('offline-')));
+        if (orphans.length > 0) {
+            const tx = db.transaction('events', 'readwrite');
+            for (const orphan of orphans) {
+                orphan.petId = petId;
+                await tx.store.put(orphan);
+                if (!all.some((existing) => existing.id === orphan.id)) {
+                    all.push(orphan);
+                }
+            }
+            await tx.done;
+        }
         if (options?.startDate) {
             const startMs = new Date(options.startDate).getTime();
             all = all.filter((e) => new Date(e.timestamp).getTime() >= startMs);
