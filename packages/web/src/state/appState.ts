@@ -14,7 +14,7 @@ import {
   UpdateEventDTO,
 } from '@dooty/shared';
 import { ApiClient, onApiActivityChange } from '../api/client.js';
-import { getPendingEvents, getEventsOffline } from '../db/offlineStore.js';
+import { getPendingEvents, getEventsOffline, rekeyPendingEvents } from '../db/offlineStore.js';
 
 type Listener = () => void;
 
@@ -882,6 +882,10 @@ class AppStateManager {
       }
 
       if (this.currentPet) {
+        if (this.currentHousehold) {
+          await rekeyPendingEvents(this.currentPet.id, this.currentHousehold.id);
+        }
+        await ApiClient.flushOfflineQueue();
         await this.refreshEvents();
       } else {
         this.events = [];
@@ -915,6 +919,8 @@ class AppStateManager {
     if (rawPets.length > 0) {
       this.currentPet = rawPets[0];
       localStorage.setItem('dooty_pet_id', this.currentPet.id);
+      await rekeyPendingEvents(this.currentPet.id, target.id);
+      await ApiClient.flushOfflineQueue();
       this.events = await getEventsOffline(this.currentPet.id);
       this.syncEvents();
     } else {
@@ -945,6 +951,14 @@ class AppStateManager {
     this.notify();
 
     try {
+      if (navigator.onLine) {
+        const flushed = await ApiClient.flushOfflineQueue();
+        await this.checkPendingSync();
+        if (flushed > 0 && this.currentPet?.id === targetPetId) {
+          this.events = await getEventsOffline(targetPetId);
+          this.notify();
+        }
+      }
       const updated = await ApiClient.syncEvents(targetPetId, async () => {
         if (this.currentPet?.id === targetPetId) {
           this.events = await getEventsOffline(targetPetId);
@@ -1105,6 +1119,8 @@ class AppStateManager {
         if (rawPets.length > 0) {
           this.currentPet = rawPets[0];
           localStorage.setItem('dooty_pet_id', this.currentPet.id);
+          await rekeyPendingEvents(this.currentPet.id, session.activeHousehold.id);
+          await ApiClient.flushOfflineQueue();
           await this.refreshEvents();
         } else {
           this.currentPet = null;
@@ -1138,6 +1154,8 @@ class AppStateManager {
         if (rawPets.length > 0) {
           this.currentPet = rawPets[0];
           localStorage.setItem('dooty_pet_id', this.currentPet.id);
+          await rekeyPendingEvents(this.currentPet.id, session.activeHousehold.id);
+          await ApiClient.flushOfflineQueue();
           await this.refreshEvents();
         } else {
           this.currentPet = null;
@@ -1167,6 +1185,8 @@ class AppStateManager {
         if (rawPets.length > 0) {
           this.currentPet = rawPets[0];
           localStorage.setItem('dooty_pet_id', this.currentPet.id);
+          await rekeyPendingEvents(this.currentPet.id, session.activeHousehold.id);
+          await ApiClient.flushOfflineQueue();
           await this.refreshEvents();
         }
         this.loadPendingInvites();
@@ -1193,6 +1213,8 @@ class AppStateManager {
         if (rawPets.length > 0) {
           this.currentPet = rawPets[0];
           localStorage.setItem('dooty_pet_id', this.currentPet.id);
+          await rekeyPendingEvents(this.currentPet.id, session.activeHousehold.id);
+          await ApiClient.flushOfflineQueue();
           await this.refreshEvents();
         }
         this.loadPendingInvites();

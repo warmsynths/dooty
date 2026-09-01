@@ -38,6 +38,8 @@ export declare function getPendingEvents(): Promise<{
     dto: CreateEventDTO;
 }[]>;
 export declare function removePendingEvent(localId: string): Promise<void>;
+export declare function replacePendingEventWithServerEvent(localId: string, serverEvent: PetEvent): Promise<void>;
+export declare function rekeyPendingEvents(newPetId: string, newHouseholdId: string, oldPetId?: string, oldHouseholdId?: string): Promise<void>;
 export declare function deleteEventOffline(eventId: string): Promise<void>;
 export declare function updateEventOffline(event: PetEvent): Promise<void>;
 export {};

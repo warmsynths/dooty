@@ -149,6 +149,41 @@ export async function removePendingEvent(localId) {
         console.warn('Failed to remove pending event:', err);
     }
 }
+export async function replacePendingEventWithServerEvent(localId, serverEvent) {
+    try {
+        const db = await getOfflineDB();
+        await db.delete('pending_events', localId);
+        await db.delete('events', localId);
+        await db.put('events', serverEvent);
+    }
+    catch (err) {
+        console.warn('Failed to replace pending event with server event:', err);
+    }
+}
+export async function rekeyPendingEvents(newPetId, newHouseholdId, oldPetId, oldHouseholdId) {
+    try {
+        const db = await getOfflineDB();
+        const pendingList = await db.getAll('pending_events');
+        for (const item of pendingList) {
+            const shouldRekey = (!oldPetId || item.dto.petId === oldPetId) &&
+                (!oldHouseholdId || item.dto.householdId === oldHouseholdId);
+            if (shouldRekey) {
+                item.dto.petId = newPetId;
+                item.dto.householdId = newHouseholdId;
+                await db.put('pending_events', item);
+                const localEvt = await db.get('events', item.localId);
+                if (localEvt) {
+                    localEvt.petId = newPetId;
+                    localEvt.householdId = newHouseholdId;
+                    await db.put('events', localEvt);
+                }
+            }
+        }
+    }
+    catch (err) {
+        console.warn('Failed to rekey pending events:', err);
+    }
+}
 export async function deleteEventOffline(eventId) {
     try {
         const db = await getOfflineDB();

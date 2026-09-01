@@ -17,6 +17,7 @@ import {
   enqueuePendingEvent,
   getPendingEvents,
   removePendingEvent,
+  replacePendingEventWithServerEvent,
   saveEventsOffline,
   getEventsOffline,
   deleteEventOffline,
@@ -477,9 +478,31 @@ export class ApiClient {
         body: JSON.stringify({ events: dtos }),
       });
       if (res.ok) {
-        for (const item of pending) {
-          await removePendingEvent(item.localId);
+        const body = await res.json().catch(() => ({}));
+        const syncedEvents: PetEvent[] = body.events || [];
+
+        for (let i = 0; i < pending.length; i++) {
+          const item = pending[i];
+          const serverEvt = syncedEvents[i];
+          if (serverEvt) {
+            await replacePendingEventWithServerEvent(item.localId, serverEvt);
+          } else {
+            await removePendingEvent(item.localId);
+          }
         }
+
+        if (syncedEvents.length > pending.length) {
+          await saveEventsOffline(syncedEvents.slice(pending.length));
+        }
+
+        const petIds = Array.from(new Set(pending.map((p) => p.dto.petId)));
+        const syncStartTime = new Date().toISOString();
+        for (const petId of petIds) {
+          if (petId) {
+            await setLastSyncTimestamp(petId, syncStartTime);
+          }
+        }
+
         return pending.length;
       }
     } catch (err) {
