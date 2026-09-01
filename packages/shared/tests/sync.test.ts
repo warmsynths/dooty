@@ -8,6 +8,7 @@ test('Reconciliation replaces optimistic offline event with server event', () =>
     householdId: 'h-local',
     petId: 'pet-local',
     eventType: 'poop',
+    loggedByName: 'Me',
     timestamp: '2026-09-01T08:30:00.000Z',
     notes: 'Morning potty',
   };
