@@ -34,6 +34,17 @@ export class DootySheet extends LitElement {
   @state() private isFetchingWeather: boolean = false;
   @state() private isSaving: boolean = false;
 
+  // Walk Start/End GPS State
+  @state() private startLat?: number = undefined;
+  @state() private startLng?: number = undefined;
+  @state() private startLocationName: string = '';
+  @state() private isLocatingStart: boolean = false;
+  @state() private endLat?: number = undefined;
+  @state() private endLng?: number = undefined;
+  @state() private endLocationName: string = '';
+  @state() private isLocatingEnd: boolean = false;
+  @state() private activeMapPickerTarget: 'single' | 'start' | 'end' = 'single';
+
   private unsubscribe?: () => void;
   private fileInput?: HTMLInputElement;
 
@@ -70,7 +81,9 @@ export class DootySheet extends LitElement {
               userNote.startsWith('Vomit') ||
               userNote.startsWith('구토') ||
               userNote.startsWith('Weigh-in') ||
-              userNote.startsWith('체중')
+              userNote.startsWith('체중') ||
+              userNote.startsWith('Walk') ||
+              userNote.startsWith('산책')
             ) {
               userNote = '';
             }
@@ -78,8 +91,8 @@ export class DootySheet extends LitElement {
             this.notes = userNote;
             this.photoUrl = meta.photoUrl || '';
             this.locationName = meta.locationName || '';
-            this.lat = evt.latitude;
-            this.lng = evt.longitude;
+            this.lat = typeof evt.latitude === 'number' ? evt.latitude : undefined;
+            this.lng = typeof evt.longitude === 'number' ? evt.longitude : undefined;
             this.weatherText = meta.weather || '';
             this.customTimestamp = evt.timestamp || new Date().toISOString();
             if (meta.consistency) this.cons = meta.consistency;
@@ -93,7 +106,27 @@ export class DootySheet extends LitElement {
             if (meta.visitReason) this.vetReason = meta.visitReason;
             if (meta.symptom) this.symptom = meta.symptom;
             if (meta.portion) this.portion = meta.portion;
+
+            if (evt.eventType === 'walk') {
+              this.startLat = typeof meta.startLat === 'number' ? meta.startLat : (typeof evt.latitude === 'number' ? evt.latitude : undefined);
+              this.startLng = typeof meta.startLng === 'number' ? meta.startLng : (typeof evt.longitude === 'number' ? evt.longitude : undefined);
+              this.startLocationName = meta.startLocationName || meta.locationName || '';
+              this.endLat = typeof meta.endLat === 'number' ? meta.endLat : undefined;
+              this.endLng = typeof meta.endLng === 'number' ? meta.endLng : undefined;
+              this.endLocationName = meta.endLocationName || '';
+            } else {
+              this.startLat = undefined;
+              this.startLng = undefined;
+              this.startLocationName = '';
+              this.endLat = undefined;
+              this.endLng = undefined;
+              this.endLocationName = '';
+            }
+
             this.isLocating = false;
+            this.isLocatingStart = false;
+            this.isLocatingEnd = false;
+            this.activeMapPickerTarget = 'single';
             this.showLocationPicker = false;
             this.showMapPicker = false;
             this.showTimePicker = false;
@@ -103,6 +136,15 @@ export class DootySheet extends LitElement {
             this.locationName = '';
             this.lat = undefined;
             this.lng = undefined;
+            this.startLat = undefined;
+            this.startLng = undefined;
+            this.startLocationName = '';
+            this.endLat = undefined;
+            this.endLng = undefined;
+            this.endLocationName = '';
+            this.isLocatingStart = false;
+            this.isLocatingEnd = false;
+            this.activeMapPickerTarget = 'single';
             this.notes = '';
             this.photoUrl = '';
             this.customMedName = '';
@@ -801,6 +843,142 @@ export class DootySheet extends LitElement {
       font-size: 9.5px;
       font-weight: 700;
       color: #6A6152;
+    }
+
+    /* Walk GPS & Length Cards */
+    .walk-gps-card {
+      background: #FFF;
+      border: 2.5px solid #17140F;
+      border-radius: 18px;
+      padding: 12px 14px;
+      box-shadow: 3px 3px 0 #17140F;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .walk-gps-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .walk-gps-title {
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
+      font-weight: 800;
+      font-size: 14.5px;
+      color: #17140F;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .walk-coords-tag {
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #2B5BE8;
+      background: #E8EEFF;
+      padding: 2px 7px;
+      border-radius: 6px;
+      border: 1px solid #17140F;
+    }
+
+    .walk-gps-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .walk-map-btn {
+      flex: 1;
+      background: #FFCE2E;
+      border: 2px solid #17140F;
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 12.5px;
+      color: #17140F;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 #17140F;
+      user-select: none;
+      transition: all 0.08s ease;
+    }
+
+    .walk-map-btn:hover {
+      filter: brightness(1.05);
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0 #17140F;
+    }
+
+    .walk-map-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
+    .walk-gps-btn {
+      background: #FFF;
+      border: 2px solid #17140F;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 12px;
+      color: #17140F;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 #17140F;
+      user-select: none;
+      transition: all 0.08s ease;
+    }
+
+    .walk-gps-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
+    .walk-custom-inputs-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .walk-input-box {
+      flex: 1;
+      background: #FFF;
+      border: 2.5px solid #17140F;
+      border-radius: 14px;
+      padding: 8px 12px;
+      box-shadow: 2px 2px 0 #17140F;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .walk-input-label {
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #9A9080;
+      text-transform: uppercase;
+    }
+
+    .walk-input-field {
+      border: none;
+      background: transparent;
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
+      font-weight: 800;
+      font-size: 15px;
+      color: #17140F;
+      outline: none;
+      width: 100%;
     }
 
     /* Start Walk Button & Who's coming */
@@ -1609,16 +1787,29 @@ export class DootySheet extends LitElement {
       toastTitle = isKo ? '체중 저장됨' : 'Weigh-in saved';
       toastSub = `${this.weightKg.toFixed(1)} kg · ${isKo ? '체중 기록 완료' : 'recorded'}`;
     } else if (type === 'walk') {
-      const walkMinLabel = isKo ? this.walkOptions.find(w => w.min === this.walkMin)?.minKo || this.walkMin : this.walkMin;
       summaryNotes = isKo
-        ? `산책 · ${walkMinLabel} (${this.walkKm}) · ${moodLabel}`
+        ? `산책 · ${this.walkMin} (${this.walkKm}) · ${moodLabel}`
         : `Walk · ${this.walkMin} (${this.walkKm}) · ${this.mood}`;
       if (this.notes) summaryNotes += ` · ${this.notes}`;
       metadata.walkDuration = this.walkMin;
       metadata.walkDistance = this.walkKm;
       metadata.mood = this.mood;
+      metadata.startLat = this.startLat;
+      metadata.startLng = this.startLng;
+      metadata.startLocationName = this.startLocationName;
+      metadata.endLat = this.endLat;
+      metadata.endLng = this.endLng;
+      metadata.endLocationName = this.endLocationName;
+
+      // Assign primary coordinates to event if start coordinates are set
+      if (this.startLat !== undefined && this.startLng !== undefined) {
+        this.lat = this.startLat;
+        this.lng = this.startLng;
+        if (!this.locationName) this.locationName = this.startLocationName;
+      }
+
       toastTitle = isKo ? '산책 기록 완료' : 'Walk logged';
-      toastSub = `${walkMinLabel} · ${this.walkKm} · ${isKo ? '좋은 운동이었어요!' : 'Good effort.'}`;
+      toastSub = `${this.walkMin} · ${this.walkKm} · ${isKo ? '저장되었습니다!' : 'Saved successfully.'}`;
     } else if (type === 'vet') {
       const vetLabel = isKo ? this.vetReasons.find(v => v.id === this.vetReason)?.nameKo || this.vetReason : this.vetReason;
       summaryNotes = isKo ? `병원 진료: ${vetLabel}` : `Vet visit: ${this.vetReason}`;
@@ -1703,16 +1894,116 @@ export class DootySheet extends LitElement {
     );
   }
 
-  private handleSpotSelected(e: CustomEvent<{ lat?: number; lng?: number; locationName: string }>) {
-    this.lat = e.detail.lat;
-    this.lng = e.detail.lng;
-    if (e.detail.locationName) {
-      this.locationName = e.detail.locationName;
-    } else if (this.lat !== undefined && this.lng !== undefined) {
-      this.locationName = `${this.lat.toFixed(4)}, ${this.lng.toFixed(4)}`;
+  private openMapPickerFor(target: 'single' | 'start' | 'end') {
+    this.activeMapPickerTarget = target;
+    this.showMapPicker = true;
+    this.requestUpdate();
+  }
+
+  private async fetchStartGPS() {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    this.isLocatingStart = true;
+    this.requestUpdate();
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        this.startLat = pos.coords.latitude;
+        this.startLng = pos.coords.longitude;
+        this.isLocatingStart = false;
+        if (!this.startLocationName) {
+          this.startLocationName = `${this.startLat.toFixed(4)}, ${this.startLng.toFixed(4)}`;
+          this.tryReverseGeocodeForTarget(this.startLat, this.startLng, 'start');
+        }
+        this.requestUpdate();
+      },
+      (err) => {
+        console.warn('Start Geolocation error:', err);
+        this.isLocatingStart = false;
+        this.requestUpdate();
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
+  private async fetchEndGPS() {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    this.isLocatingEnd = true;
+    this.requestUpdate();
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        this.endLat = pos.coords.latitude;
+        this.endLng = pos.coords.longitude;
+        this.isLocatingEnd = false;
+        if (!this.endLocationName) {
+          this.endLocationName = `${this.endLat.toFixed(4)}, ${this.endLng.toFixed(4)}`;
+          this.tryReverseGeocodeForTarget(this.endLat, this.endLng, 'end');
+        }
+        this.requestUpdate();
+      },
+      (err) => {
+        console.warn('End Geolocation error:', err);
+        this.isLocatingEnd = false;
+        this.requestUpdate();
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
+  private async tryReverseGeocodeForTarget(lat: number, lng: number, target: 'single' | 'start' | 'end') {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const road =
+          data.address?.road ||
+          data.address?.pedestrian ||
+          data.address?.suburb ||
+          data.address?.neighbourhood;
+        const city =
+          data.address?.city ||
+          data.address?.town ||
+          data.address?.village ||
+          data.address?.county;
+        const name =
+          road && city
+            ? `${road}, ${city}`
+            : road || (data.display_name ? data.display_name.split(',').slice(0, 2).join(',').trim() : '');
+        if (name) {
+          if (target === 'start') this.startLocationName = name;
+          else if (target === 'end') this.endLocationName = name;
+          else this.locationName = name;
+          this.requestUpdate();
+        }
+      }
+    } catch {
+      // Fallback
     }
-    if (this.lat !== undefined && this.lng !== undefined) {
-      this.fetchWeather(this.lat, this.lng);
+  }
+
+  private handleSpotSelected(e: CustomEvent<{ lat?: number; lng?: number; locationName: string }>) {
+    const lat = e.detail.lat;
+    const lng = e.detail.lng;
+    const locName =
+      e.detail.locationName ||
+      (lat !== undefined && lng !== undefined ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : '');
+
+    if (this.activeMapPickerTarget === 'start') {
+      this.startLat = lat;
+      this.startLng = lng;
+      this.startLocationName = locName;
+    } else if (this.activeMapPickerTarget === 'end') {
+      this.endLat = lat;
+      this.endLng = lng;
+      this.endLocationName = locName;
+    } else {
+      this.lat = lat;
+      this.lng = lng;
+      this.locationName = locName;
+      if (lat !== undefined && lng !== undefined) {
+        this.fetchWeather(lat, lng);
+      }
     }
     this.showMapPicker = false;
     this.requestUpdate();
@@ -1726,6 +2017,15 @@ export class DootySheet extends LitElement {
     this.locationName = '';
     this.lat = undefined;
     this.lng = undefined;
+    this.startLat = undefined;
+    this.startLng = undefined;
+    this.startLocationName = '';
+    this.endLat = undefined;
+    this.endLng = undefined;
+    this.endLocationName = '';
+    this.isLocatingStart = false;
+    this.isLocatingEnd = false;
+    this.activeMapPickerTarget = 'single';
     this.customTimestamp = '';
     this.isLocating = false;
     this.showLocationPicker = false;
@@ -1998,74 +2298,78 @@ export class DootySheet extends LitElement {
                         `
                       : null}
 
-                    <!-- 5. Walk (Live tracking & Quick logs) -->
+                    <!-- 5. Walk (Live tracking & Quick logs & Editing) -->
                     ${showWalk
                       ? html`
                           <div style="display: flex; flex-direction: column; gap: 14px;">
-                            <!-- Start Live Walk Button -->
-                            <div
-                              class="start-walk-btn"
-                              @click=${() => {
-                                appState.closeLogger();
-                                appState.startLiveWalk(this.walkPetIds);
-                              }}
-                            >
-                              <div class="play-icon-circle">
-                                <div class="play-triangle"></div>
-                              </div>
-                              <div style="flex: 1; min-width: 0;">
-                                <div class="start-walk-title">${isKo ? '지금 산책 시작' : 'Start walk now'}</div>
-                                <div class="start-walk-sub">${isKo ? '시간 측정 및 경로 기록' : 'Times it and traces the route'}</div>
-                              </div>
-                            </div>
-
-                            <!-- Who's Coming Multi-Pet Selector -->
-                            ${appState.pets.length > 1
+                            ${!isEditing
                               ? html`
-                                  <div>
-                                    <div class="section-lbl" style="margin-bottom: 9px;">
-                                      ${isKo ? '누가 가나요?' : "Who's coming"}
+                                  <!-- Start Live Walk Button -->
+                                  <div
+                                    class="start-walk-btn"
+                                    @click=${() => {
+                                      appState.closeLogger();
+                                      appState.startLiveWalk(this.walkPetIds);
+                                    }}
+                                  >
+                                    <div class="play-icon-circle">
+                                      <div class="play-triangle"></div>
                                     </div>
-                                    <div class="who-chips-row">
-                                      ${appState.pets.map((p) => {
-                                        const isSelected = this.walkPetIds.includes(p.id);
-                                        return html`
-                                          <div
-                                            class="who-pet-chip ${isSelected ? 'active' : ''}"
-                                            @click=${() => {
-                                              if (isSelected) {
-                                                if (this.walkPetIds.length > 1) {
-                                                  this.walkPetIds = this.walkPetIds.filter((id) => id !== p.id);
-                                                }
-                                              } else {
-                                                this.walkPetIds = [...this.walkPetIds, p.id];
-                                              }
-                                            }}
-                                          >
-                                            <div class="who-pet-avatar">${p.name.charAt(0).toUpperCase()}</div>
-                                            <div class="who-pet-name">${p.name}</div>
-                                            <div class="who-tick-circle">${isSelected ? '✓' : ''}</div>
+                                    <div style="flex: 1; min-width: 0;">
+                                      <div class="start-walk-title">${isKo ? '지금 산책 시작' : 'Start walk now'}</div>
+                                      <div class="start-walk-sub">${isKo ? '실시간 GPS 지도 및 경로 기록' : 'Live GPS map and route tracking'}</div>
+                                    </div>
+                                  </div>
+
+                                  <!-- Who's Coming Multi-Pet Selector -->
+                                  ${appState.pets.length > 1
+                                    ? html`
+                                        <div>
+                                          <div class="section-lbl" style="margin-bottom: 9px;">
+                                            ${isKo ? '누가 가나요?' : "Who's coming"}
                                           </div>
-                                        `;
-                                      })}
+                                          <div class="who-chips-row">
+                                            ${appState.pets.map((p) => {
+                                              const isSelected = this.walkPetIds.includes(p.id);
+                                              return html`
+                                                <div
+                                                  class="who-pet-chip ${isSelected ? 'active' : ''}"
+                                                  @click=${() => {
+                                                    if (isSelected) {
+                                                      if (this.walkPetIds.length > 1) {
+                                                        this.walkPetIds = this.walkPetIds.filter((id) => id !== p.id);
+                                                      }
+                                                    } else {
+                                                      this.walkPetIds = [...this.walkPetIds, p.id];
+                                                    }
+                                                  }}
+                                                >
+                                                  <div class="who-pet-avatar">${p.name.charAt(0).toUpperCase()}</div>
+                                                  <div class="who-pet-name">${p.name}</div>
+                                                  <div class="who-tick-circle">${isSelected ? '✓' : ''}</div>
+                                                </div>
+                                              `;
+                                            })}
+                                          </div>
+                                        </div>
+                                      `
+                                    : null}
+
+                                  <!-- Divider -->
+                                  <div class="walk-or-divider">
+                                    <div class="walk-or-line"></div>
+                                    <div class="walk-or-text">
+                                      ${isKo ? '또는 산책 기록 직접 입력' : 'OR LOG / EDIT WALK DETAILS'}
                                     </div>
+                                    <div class="walk-or-line"></div>
                                   </div>
                                 `
                               : null}
 
-                            <!-- Divider -->
-                            <div class="walk-or-divider">
-                              <div class="walk-or-line"></div>
-                              <div class="walk-or-text">
-                                ${isKo ? '또는 이미 완료한 산책 기록' : 'OR LOG ONE YOU ALREADY DID'}
-                              </div>
-                              <div class="walk-or-line"></div>
-                            </div>
-
-                            <!-- Manual Walk Duration Selector -->
+                            <!-- Walk Length: Presets & Custom Duration/Distance -->
                             <div>
-                              <div class="section-lbl" style="margin-bottom: 10px;">
-                                ${isKo ? '산책 시간' : 'How long'}
+                              <div class="section-lbl" style="margin-bottom: 8px;">
+                                ${isKo ? '산책 시간 & 거리' : 'Walk Length & Distance'}
                               </div>
                               <div class="walk-row">
                                 ${this.walkOptions.map(
@@ -2083,11 +2387,143 @@ export class DootySheet extends LitElement {
                                   `
                                 )}
                               </div>
+
+                              <div class="walk-custom-inputs-row">
+                                <div class="walk-input-box">
+                                  <span class="walk-input-label">${isKo ? '시간 (분/시간)' : 'Duration'}</span>
+                                  <input
+                                    type="text"
+                                    class="walk-input-field"
+                                    placeholder="30 min"
+                                    .value=${this.walkMin}
+                                    @input=${(e: any) => (this.walkMin = e.target.value)}
+                                  />
+                                </div>
+                                <div class="walk-input-box">
+                                  <span class="walk-input-label">${isKo ? '거리 (km)' : 'Distance'}</span>
+                                  <input
+                                    type="text"
+                                    class="walk-input-field"
+                                    placeholder="2.3 km"
+                                    .value=${this.walkKm}
+                                    @input=${(e: any) => (this.walkKm = e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Start GPS Point Card -->
+                            <div class="walk-gps-card">
+                              <div class="walk-gps-header">
+                                <div class="walk-gps-title">
+                                  <span>🟢</span>
+                                  <span>${isKo ? '출발 위치 (Start GPS)' : 'Start Point (GPS)'}</span>
+                                </div>
+                                ${typeof this.startLat === 'number' && typeof this.startLng === 'number'
+                                  ? html`
+                                      <span class="walk-coords-tag">
+                                        ${this.startLat.toFixed(4)}, ${this.startLng.toFixed(4)}
+                                      </span>
+                                    `
+                                  : null}
+                              </div>
+
+                              <input
+                                type="text"
+                                class="custom-loc-input"
+                                placeholder="${isKo ? '출발 장소명 (예: 집, 공원 입구)' : 'Start place name (e.g. Home, Park Gate)...'}"
+                                .value=${this.startLocationName}
+                                @input=${(e: any) => (this.startLocationName = e.target.value)}
+                              />
+
+                              <div class="walk-gps-actions">
+                                <button class="walk-map-btn" @click=${() => this.openMapPickerFor('start')}>
+                                  <span>🗺️</span>
+                                  <span>${isKo ? '지도에서 출발지 선택' : 'Pick Start on Map'}</span>
+                                </button>
+                                <button
+                                  class="walk-gps-btn"
+                                  @click=${() => this.fetchStartGPS()}
+                                  ?disabled=${this.isLocatingStart}
+                                >
+                                  <span>${this.isLocatingStart ? '⏳' : '🎯'}</span>
+                                  <span>${this.isLocatingStart ? (isKo ? '수신중' : 'GPS...') : (isKo ? '내 위치' : 'GPS')}</span>
+                                </button>
+                                ${typeof this.startLat === 'number' || this.startLocationName
+                                  ? html`
+                                      <button
+                                        class="gps-clear-btn"
+                                        style="margin-left: 0;"
+                                        @click=${() => {
+                                          this.startLat = undefined;
+                                          this.startLng = undefined;
+                                          this.startLocationName = '';
+                                        }}
+                                      >
+                                        ✕
+                                      </button>
+                                    `
+                                  : null}
+                              </div>
+                            </div>
+
+                            <!-- End GPS Point Card -->
+                            <div class="walk-gps-card">
+                              <div class="walk-gps-header">
+                                <div class="walk-gps-title">
+                                  <span>🏁</span>
+                                  <span>${isKo ? '도착 위치 (End GPS)' : 'End Point (GPS)'}</span>
+                                </div>
+                                ${typeof this.endLat === 'number' && typeof this.endLng === 'number'
+                                  ? html`
+                                      <span class="walk-coords-tag">
+                                        ${this.endLat.toFixed(4)}, ${this.endLng.toFixed(4)}
+                                      </span>
+                                    `
+                                  : null}
+                              </div>
+
+                              <input
+                                type="text"
+                                class="custom-loc-input"
+                                placeholder="${isKo ? '도착 장소명 (예: 카페, 집 도착)' : 'End place name (e.g. Cafe, Back home)...'}"
+                                .value=${this.endLocationName}
+                                @input=${(e: any) => (this.endLocationName = e.target.value)}
+                              />
+
+                              <div class="walk-gps-actions">
+                                <button class="walk-map-btn" @click=${() => this.openMapPickerFor('end')}>
+                                  <span>🗺️</span>
+                                  <span>${isKo ? '지도에서 도착지 선택' : 'Pick End on Map'}</span>
+                                </button>
+                                <button
+                                  class="walk-gps-btn"
+                                  @click=${() => this.fetchEndGPS()}
+                                  ?disabled=${this.isLocatingEnd}
+                                >
+                                  <span>${this.isLocatingEnd ? '⏳' : '🎯'}</span>
+                                  <span>${this.isLocatingEnd ? (isKo ? '수신중' : 'GPS...') : (isKo ? '내 위치' : 'GPS')}</span>
+                                </button>
+                                ${typeof this.endLat === 'number' || this.endLocationName
+                                  ? html`
+                                      <button
+                                        class="gps-clear-btn"
+                                        style="margin-left: 0;"
+                                        @click=${() => {
+                                          this.endLat = undefined;
+                                          this.endLng = undefined;
+                                          this.endLocationName = '';
+                                        }}
+                                      >
+                                        ✕
+                                      </button>
+                                    `
+                                  : null}
+                              </div>
                             </div>
                           </div>
                         `
                       : null}
-
 
                     <!-- 6. Vet Visit Reason (Vet) -->
                     ${showVet
@@ -2181,27 +2617,31 @@ export class DootySheet extends LitElement {
                         `
                       : null}
 
-                    <!-- Location & Logged By -->
+                    <!-- Location & Logged By (Single location for non-walk events) -->
                     <div class="pill-row">
-                      <div
-                        class="pill-info ${this.showLocationPicker ? 'active-picker' : ''}"
-                        @click=${() => (this.showLocationPicker = !this.showLocationPicker)}
-                      >
-                        <div class="pill-label">${isKo ? '위치' : 'Location'} 📍</div>
-                        <div class="pill-val" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                          ${this.isLocating
-                            ? (isKo ? 'GPS 확인 중...' : 'Locating GPS...')
-                            : (this.locationName || (this.lat ? `${this.lat.toFixed(4)}, ${this.lng?.toFixed(4)}` : (isKo ? '위치 추가' : 'Add location')))}
-                        </div>
-                        <div class="pill-sub">
-                          ${this.lat
-                            ? (isKo ? 'GPS 연결됨 · 탭하여 변경' : 'GPS Tagged · tap to edit')
-                            : (this.locationName
-                                ? (isKo ? '장소 지정됨 · 탭하여 변경' : 'Custom spot · tap to edit')
-                                : (isKo ? '탭하여 GPS/장소 태그' : 'Tap to tag GPS/spot'))}
-                        </div>
-                      </div>
-                      <div class="pill-info">
+                      ${!showWalk
+                        ? html`
+                            <div
+                              class="pill-info ${this.showLocationPicker ? 'active-picker' : ''}"
+                              @click=${() => (this.showLocationPicker = !this.showLocationPicker)}
+                            >
+                              <div class="pill-label">${isKo ? '위치' : 'Location'} 📍</div>
+                              <div class="pill-val" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${this.isLocating
+                                  ? (isKo ? 'GPS 확인 중...' : 'Locating GPS...')
+                                  : (this.locationName || (typeof this.lat === 'number' && typeof this.lng === 'number' ? `${this.lat.toFixed(4)}, ${this.lng.toFixed(4)}` : (isKo ? '위치 추가' : 'Add location')))}
+                              </div>
+                              <div class="pill-sub">
+                                ${typeof this.lat === 'number' && typeof this.lng === 'number'
+                                  ? (isKo ? 'GPS 연결됨 · 탭하여 변경' : 'GPS Tagged · tap to edit')
+                                  : (this.locationName
+                                      ? (isKo ? '장소 지정됨 · 탭하여 변경' : 'Custom spot · tap to edit')
+                                      : (isKo ? '탭하여 GPS/장소 태그' : 'Tap to tag GPS/spot'))}
+                              </div>
+                            </div>
+                          `
+                        : null}
+                      <div class="pill-info" style="${showWalk ? 'flex: 1;' : ''}">
                         <div class="pill-label">${isKo ? '기록자' : 'Logged by'}</div>
                         <div class="pill-val">
                           ${appState.currentUser?.displayName ||
@@ -2212,7 +2652,7 @@ export class DootySheet extends LitElement {
                       </div>
                     </div>
 
-                    ${this.showLocationPicker
+                    ${!showWalk && this.showLocationPicker
                       ? html`
                           <div class="location-picker-card">
                             <div class="picker-header">
@@ -2222,20 +2662,20 @@ export class DootySheet extends LitElement {
 
                             <div class="gps-btn-row">
                               <button
-                                class="gps-action-btn ${this.lat ? 'tagged' : ''}"
+                                class="gps-action-btn ${typeof this.lat === 'number' ? 'tagged' : ''}"
                                 @click=${() => this.fetchCurrentLocation()}
                                 ?disabled=${this.isLocating}
                               >
-                                <span>${this.isLocating ? '⏳' : this.lat ? '📍' : '📡'}</span>
+                                <span>${this.isLocating ? '⏳' : typeof this.lat === 'number' ? '📍' : '📡'}</span>
                                 <span>
                                   ${this.isLocating
                                     ? (isKo ? 'GPS 위치 수신 중...' : 'Getting GPS...')
-                                    : this.lat
-                                    ? (isKo ? `GPS 연결됨 (${this.lat.toFixed(4)}, ${this.lng?.toFixed(4)})` : `GPS Tagged (${this.lat.toFixed(4)}, ${this.lng?.toFixed(4)})`)
+                                    : (typeof this.lat === 'number' && typeof this.lng === 'number')
+                                    ? (isKo ? `GPS 연결됨 (${this.lat.toFixed(4)}, ${this.lng.toFixed(4)})` : `GPS Tagged (${this.lat.toFixed(4)}, ${this.lng.toFixed(4)})`)
                                     : (isKo ? '현재 GPS 위치 태그하기' : 'Tag Current GPS')}
                                 </span>
                               </button>
-                              ${this.lat || this.locationName
+                              ${typeof this.lat === 'number' || this.locationName
                                 ? html`
                                     <button class="gps-clear-btn" @click=${() => this.clearLocation()}>
                                       ${isKo ? '초기화' : 'Clear'}
@@ -2247,7 +2687,7 @@ export class DootySheet extends LitElement {
                             <!-- Open Interactive Map Spot Picker -->
                             <button
                               class="map-picker-trigger-btn"
-                              @click=${() => (this.showMapPicker = true)}
+                              @click=${() => this.openMapPickerFor('single')}
                             >
                               <span>🗺️</span>
                               <span>${isKo ? '지도에서 핀 찍기 / 위치 찾기' : 'Find / Pin Spot on Map'}</span>
@@ -2346,9 +2786,9 @@ export class DootySheet extends LitElement {
         <!-- Interactive Map Spot Picker Modal -->
         <dooty-map-picker
           .open=${this.showMapPicker}
-          .initialLat=${this.lat}
-          .initialLng=${this.lng}
-          .initialLocationName=${this.locationName}
+          .initialLat=${this.activeMapPickerTarget === 'start' ? this.startLat : this.activeMapPickerTarget === 'end' ? this.endLat : this.lat}
+          .initialLng=${this.activeMapPickerTarget === 'start' ? this.startLng : this.activeMapPickerTarget === 'end' ? this.endLng : this.lng}
+          .initialLocationName=${this.activeMapPickerTarget === 'start' ? this.startLocationName : this.activeMapPickerTarget === 'end' ? this.endLocationName : this.locationName}
           @spot-selected=${(e: CustomEvent) => this.handleSpotSelected(e)}
           @close=${() => (this.showMapPicker = false)}
         ></dooty-map-picker>

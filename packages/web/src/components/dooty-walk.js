@@ -6,6 +6,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import L from 'leaflet';
 import { appState } from '../state/appState.js';
 let DootyWalk = class DootyWalk extends LitElement {
     constructor() {
@@ -17,6 +18,92 @@ let DootyWalk = class DootyWalk extends LitElement {
     static { this.styles = css `
     :host {
       display: contents;
+    }
+
+    /* Core Leaflet Shadow DOM Structural Rules */
+    .leaflet-pane,
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow,
+    .leaflet-tile-container,
+    .leaflet-pane > svg,
+    .leaflet-pane > canvas,
+    .leaflet-zoom-box,
+    .leaflet-image-layer,
+    .leaflet-layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    .leaflet-container {
+      overflow: hidden;
+      position: relative;
+      outline: 0;
+      -webkit-tap-highlight-color: transparent;
+      width: 100%;
+      height: 100%;
+    }
+    .leaflet-tile {
+      filter: inherit;
+      visibility: hidden;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    .leaflet-tile-loaded {
+      visibility: inherit;
+    }
+    .leaflet-tile-container {
+      pointer-events: none;
+    }
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow {
+      display: block;
+    }
+    .leaflet-container .leaflet-overlay-pane svg {
+      max-width: none !important;
+      max-height: none !important;
+    }
+    .leaflet-container .leaflet-marker-pane img,
+    .leaflet-container .leaflet-shadow-pane img,
+    .leaflet-container .leaflet-tile-pane img,
+    .leaflet-container img.leaflet-image-layer,
+    .leaflet-container .leaflet-tile {
+      max-width: none !important;
+      max-height: none !important;
+      width: 256px;
+      height: 256px;
+      padding: 0;
+    }
+    .leaflet-map-pane svg {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    .leaflet-control {
+      position: relative;
+      z-index: 800;
+      pointer-events: visiblePainted;
+      pointer-events: auto;
+    }
+    .leaflet-top,
+    .leaflet-bottom {
+      position: absolute;
+      z-index: 1000;
+      pointer-events: none;
+    }
+    .leaflet-top {
+      top: 0;
+    }
+    .leaflet-right {
+      right: 0;
+    }
+    .leaflet-bottom {
+      bottom: 0;
+    }
+    .leaflet-left {
+      left: 0;
     }
 
     /* Floating Banner above dock */
@@ -82,7 +169,7 @@ let DootyWalk = class DootyWalk extends LitElement {
     }
 
     .banner-time {
-      font-family: var(--font-heading);
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
       font-weight: 800;
       font-size: 20px;
       color: #17140F;
@@ -126,49 +213,16 @@ let DootyWalk = class DootyWalk extends LitElement {
       border-bottom: 3px solid #17140F;
     }
 
-    .map-grid-bg {
-      position: absolute;
-      inset: 0;
-      background: repeating-linear-gradient(0deg, transparent 0 60px, #D2D9C4 60px 66px),
-        repeating-linear-gradient(90deg, transparent 0 76px, #D2D9C4 76px 82px);
-    }
-
-    .map-park-1 {
-      position: absolute;
-      left: -30px;
-      top: 150px;
-      width: 190px;
-      height: 130px;
-      border-radius: 60px;
-      background: #C3DCB4;
-      border: 3px solid #17140F;
-    }
-
-    .map-park-2 {
-      position: absolute;
-      right: -40px;
-      top: 36px;
-      width: 150px;
-      height: 150px;
-      border-radius: 50%;
-      background: #C3DCB4;
-      border: 3px solid #17140F;
-    }
-
-    .map-river {
-      position: absolute;
-      left: -4px;
-      right: -4px;
-      top: 250px;
-      height: 20px;
-      background: #9EC6E8;
-      border-top: 3px solid #17140F;
-      border-bottom: 3px solid #17140F;
+    #live-leaflet-map {
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #E5EAD9;
     }
 
     .minimize-btn {
       position: absolute;
-      z-index: 5;
+      z-index: 500;
       left: 16px;
       top: 58px;
       width: 40px;
@@ -195,7 +249,7 @@ let DootyWalk = class DootyWalk extends LitElement {
 
     .live-status-pill {
       position: absolute;
-      z-index: 5;
+      z-index: 500;
       right: 16px;
       top: 58px;
       background: #17140F;
@@ -204,6 +258,34 @@ let DootyWalk = class DootyWalk extends LitElement {
       display: flex;
       align-items: center;
       gap: 7px;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+    }
+
+    .recenter-fab {
+      position: absolute;
+      z-index: 500;
+      right: 16px;
+      bottom: 16px;
+      background: #FFCE2E;
+      border: 2.5px solid #17140F;
+      border-radius: 14px;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 12.5px;
+      color: #17140F;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      box-shadow: 2.5px 2.5px 0 #17140F;
+      user-select: none;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+
+    .recenter-fab:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 #17140F;
     }
 
     .live-controls-panel {
@@ -223,7 +305,7 @@ let DootyWalk = class DootyWalk extends LitElement {
     }
 
     .main-timer {
-      font-family: var(--font-heading);
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
       font-weight: 800;
       font-size: 54px;
       color: #17140F;
@@ -246,7 +328,7 @@ let DootyWalk = class DootyWalk extends LitElement {
       border-radius: 20px;
       padding: 16px;
       text-align: center;
-      font-family: var(--font-heading);
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
       font-weight: 800;
       font-size: 16px;
       color: #17140F;
@@ -269,7 +351,7 @@ let DootyWalk = class DootyWalk extends LitElement {
       border-radius: 20px;
       padding: 16px;
       text-align: center;
-      font-family: var(--font-heading);
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
       font-weight: 800;
       font-size: 18px;
       color: #FFF;
@@ -359,7 +441,7 @@ let DootyWalk = class DootyWalk extends LitElement {
     }
 
     .summary-title {
-      font-family: var(--font-heading);
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
       font-weight: 800;
       font-size: 32px;
       color: #17140F;
@@ -376,12 +458,19 @@ let DootyWalk = class DootyWalk extends LitElement {
 
     .map-preview-box {
       position: relative;
-      height: 196px;
+      height: 220px;
       border: 3px solid #17140F;
       border-radius: 22px;
       overflow: hidden;
       background: #E3E8D8;
       box-shadow: 4px 4px 0 #17140F;
+    }
+
+    #summary-leaflet-map {
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #E5EAD9;
     }
 
     .kpis-row {
@@ -400,7 +489,7 @@ let DootyWalk = class DootyWalk extends LitElement {
     }
 
     .kpi-val {
-      font-family: var(--font-heading);
+      font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif);
       font-weight: 800;
       font-size: 21px;
       color: #17140F;
@@ -472,14 +561,327 @@ let DootyWalk = class DootyWalk extends LitElement {
       background: #FFFBF2;
       border-top: 3px solid #F0E7D3;
     }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   `; }
     connectedCallback() {
         super.connectedCallback();
-        this.unsubscribe = appState.subscribe(() => this.requestUpdate());
+        this.unsubscribe = appState.subscribe(() => {
+            this.requestUpdate();
+            this.syncMaps();
+        });
     }
     disconnectedCallback() {
         super.disconnectedCallback();
         this.unsubscribe?.();
+        this.destroyLiveMap();
+        this.destroySummaryMap();
+    }
+    updated(changedProps) {
+        super.updated(changedProps);
+        this.syncMaps();
+    }
+    syncMaps() {
+        const view = appState.walkView;
+        if (view === 'live') {
+            this.destroySummaryMap();
+            setTimeout(() => this.initOrUpdateLiveMap(), 50);
+        }
+        else if (view === 'summary') {
+            this.destroyLiveMap();
+            setTimeout(() => this.initOrUpdateSummaryMap(), 50);
+        }
+        else {
+            this.destroyLiveMap();
+            this.destroySummaryMap();
+        }
+    }
+    destroyLiveMap() {
+        if (this.liveMap) {
+            this.liveMap.remove();
+            this.liveMap = undefined;
+            this.livePolyline = undefined;
+            this.livePolylineShadow = undefined;
+            this.liveStartMarker = undefined;
+            this.liveCurrentMarker = undefined;
+        }
+    }
+    destroySummaryMap() {
+        if (this.summaryMap) {
+            this.summaryMap.remove();
+            this.summaryMap = undefined;
+        }
+    }
+    initOrUpdateLiveMap() {
+        const container = this.renderRoot?.querySelector('#live-leaflet-map');
+        if (!container)
+            return;
+        const walk = appState.activeWalk;
+        if (!walk)
+            return;
+        const route = walk.route || [];
+        const currentLat = walk.currentLat ?? (route.length > 0 ? route[route.length - 1][0] : 37.5665);
+        const currentLng = walk.currentLng ?? (route.length > 0 ? route[route.length - 1][1] : 126.9780);
+        if (!this.liveMap) {
+            this.liveMap = L.map(container, {
+                zoomControl: false,
+                attributionControl: false,
+            }).setView([currentLat, currentLng], 17);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                subdomains: 'abcd',
+            }).addTo(this.liveMap);
+            // Start Shadow & Main Polylines
+            this.livePolylineShadow = L.polyline(route, {
+                color: '#17140F',
+                weight: 9,
+                lineCap: 'round',
+                lineJoin: 'round',
+                opacity: 0.9,
+            }).addTo(this.liveMap);
+            this.livePolyline = L.polyline(route, {
+                color: '#FF5A3C',
+                weight: 5,
+                lineCap: 'round',
+                lineJoin: 'round',
+                opacity: 1,
+            }).addTo(this.liveMap);
+            // Start Point Marker Icon
+            const startPinHtml = `
+        <div style="transform: translate(-50%, -50%);">
+          <div style="
+            background: #FFCE2E;
+            border: 3px solid #17140F;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 2px 2px 0 #17140F;
+            font-size: 11px;
+            font-weight: 800;
+            color: #17140F;
+          ">
+            S
+          </div>
+        </div>
+      `;
+            const startIcon = L.divIcon({
+                className: 'dooty-live-start-pin',
+                html: startPinHtml,
+                iconSize: [0, 0],
+            });
+            if (walk.startLat !== undefined && walk.startLng !== undefined) {
+                this.liveStartMarker = L.marker([walk.startLat, walk.startLng], { icon: startIcon }).addTo(this.liveMap);
+            }
+            // Current Location Pulsing Marker Icon
+            const currentPinHtml = `
+        <div style="position: relative; transform: translate(-50%, -50%); width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+          <div style="
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(31, 201, 155, 0.4);
+            animation: tb-ping 1.5s ease-out infinite;
+          "></div>
+          <div style="
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #1FC99B;
+            border: 3px solid #17140F;
+            box-shadow: 2px 2px 0 #17140F;
+            position: relative;
+            z-index: 2;
+          "></div>
+        </div>
+      `;
+            const currentIcon = L.divIcon({
+                className: 'dooty-live-current-pin',
+                html: currentPinHtml,
+                iconSize: [0, 0],
+            });
+            this.liveCurrentMarker = L.marker([currentLat, currentLng], { icon: currentIcon }).addTo(this.liveMap);
+            setTimeout(() => this.liveMap?.invalidateSize(), 150);
+        }
+        else {
+            // Update layers
+            this.liveMap.invalidateSize();
+            if (this.livePolyline && this.livePolylineShadow) {
+                this.livePolyline.setLatLngs(route);
+                this.livePolylineShadow.setLatLngs(route);
+            }
+            if (walk.startLat !== undefined && walk.startLng !== undefined) {
+                if (!this.liveStartMarker) {
+                    const startPinHtml = `
+            <div style="transform: translate(-50%, -50%);">
+              <div style="
+                background: #FFCE2E;
+                border: 3px solid #17140F;
+                border-radius: 50%;
+                width: 22px;
+                height: 22px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 2px 2px 0 #17140F;
+                font-size: 11px;
+                font-weight: 800;
+                color: #17140F;
+              ">
+                S
+              </div>
+            </div>
+          `;
+                    const startIcon = L.divIcon({
+                        className: 'dooty-live-start-pin',
+                        html: startPinHtml,
+                        iconSize: [0, 0],
+                    });
+                    this.liveStartMarker = L.marker([walk.startLat, walk.startLng], { icon: startIcon }).addTo(this.liveMap);
+                }
+                else {
+                    this.liveStartMarker.setLatLng([walk.startLat, walk.startLng]);
+                }
+            }
+            if (this.liveCurrentMarker) {
+                this.liveCurrentMarker.setLatLng([currentLat, currentLng]);
+            }
+            // Smoothly pan map to current location
+            if (walk.currentLat !== undefined && walk.currentLng !== undefined) {
+                this.liveMap.panTo([walk.currentLat, walk.currentLng], { animate: true, duration: 0.8 });
+            }
+        }
+    }
+    handleRecenterLive() {
+        if (!this.liveMap || !appState.activeWalk)
+            return;
+        const walk = appState.activeWalk;
+        const lat = walk.currentLat ?? (walk.route.length > 0 ? walk.route[walk.route.length - 1][0] : undefined);
+        const lng = walk.currentLng ?? (walk.route.length > 0 ? walk.route[walk.route.length - 1][1] : undefined);
+        if (lat !== undefined && lng !== undefined) {
+            this.liveMap.flyTo([lat, lng], 17, { animate: true, duration: 0.8 });
+        }
+    }
+    initOrUpdateSummaryMap() {
+        const container = this.renderRoot?.querySelector('#summary-leaflet-map');
+        if (!container)
+            return;
+        const summary = appState.walkSummaryData;
+        if (!summary)
+            return;
+        const route = summary.route || [];
+        const defaultCenter = summary.startLat !== undefined && summary.startLng !== undefined
+            ? [summary.startLat, summary.startLng]
+            : route.length > 0
+                ? [route[0][0], route[0][1]]
+                : [37.5665, 126.9780];
+        if (!this.summaryMap) {
+            this.summaryMap = L.map(container, {
+                zoomControl: false,
+                attributionControl: false,
+                dragging: true,
+                touchZoom: true,
+                scrollWheelZoom: false,
+            }).setView(defaultCenter, 15);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                subdomains: 'abcd',
+            }).addTo(this.summaryMap);
+            if (route.length >= 2) {
+                // Shadow line
+                L.polyline(route, {
+                    color: '#17140F',
+                    weight: 8,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    opacity: 0.9,
+                }).addTo(this.summaryMap);
+                // Main colored line
+                const polyline = L.polyline(route, {
+                    color: '#1FC99B',
+                    weight: 4.5,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    opacity: 1,
+                }).addTo(this.summaryMap);
+                this.summaryMap.fitBounds(polyline.getBounds(), { padding: [35, 35] });
+            }
+            // Add Start Marker (🟢 Start)
+            const startPt = summary.startLat !== undefined && summary.startLng !== undefined
+                ? [summary.startLat, summary.startLng]
+                : route.length > 0
+                    ? [route[0][0], route[0][1]]
+                    : undefined;
+            if (startPt) {
+                const startIcon = L.divIcon({
+                    className: 'dooty-summary-start-pin',
+                    html: `
+            <div style="transform: translate(-50%, -50%);">
+              <div style="
+                background: #FFCE2E;
+                border: 2.5px solid #17140F;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 2px 2px 0 #17140F;
+                font-size: 11px;
+                font-weight: 800;
+                color: #17140F;
+              ">
+                📍
+              </div>
+            </div>
+          `,
+                    iconSize: [0, 0],
+                });
+                L.marker(startPt, { icon: startIcon }).addTo(this.summaryMap);
+            }
+            // Add End Marker (🏁 Finish)
+            const endPt = summary.endLat !== undefined && summary.endLng !== undefined
+                ? [summary.endLat, summary.endLng]
+                : route.length > 1
+                    ? [route[route.length - 1][0], route[route.length - 1][1]]
+                    : undefined;
+            if (endPt) {
+                const endIcon = L.divIcon({
+                    className: 'dooty-summary-end-pin',
+                    html: `
+            <div style="transform: translate(-50%, -50%);">
+              <div style="
+                background: #FF5A3C;
+                border: 2.5px solid #17140F;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 2px 2px 0 #17140F;
+                font-size: 11px;
+                font-weight: 800;
+                color: #FFF;
+              ">
+                🏁
+              </div>
+            </div>
+          `,
+                    iconSize: [0, 0],
+                });
+                L.marker(endPt, { icon: endIcon }).addTo(this.summaryMap);
+            }
+            setTimeout(() => this.summaryMap?.invalidateSize(), 150);
+        }
+        else {
+            this.summaryMap.invalidateSize();
+        }
     }
     formatSec(sec) {
         const m = Math.floor(sec / 60);
@@ -495,13 +897,10 @@ let DootyWalk = class DootyWalk extends LitElement {
         const kmStr = appState.getWalkDistanceKm();
         const paceStr = appState.getWalkPace();
         const isPaused = walk?.pausedAt !== null;
-        // Fixed mock GPS SVG route coordinates
-        const routeD = 'M 60 220 Q 90 120 180 140 T 280 90 T 320 220 T 220 310';
-        const startX = 60;
-        const startY = 220;
-        const headX = 220;
-        const headY = 310;
         return html `
+      <!-- Inject Leaflet core CSS -->
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
       <!-- 1. Floating Banner above Dock (Visible when walk is running in background) -->
       ${walk && view === null
             ? html `
@@ -523,38 +922,9 @@ let DootyWalk = class DootyWalk extends LitElement {
       ${walk && view === 'live'
             ? html `
             <div class="live-fullscreen">
-              <!-- Top Map Area with GPS Trace -->
+              <!-- Top Real Leaflet Map Area with GPS Trace -->
               <div class="live-map-area">
-                <div class="map-grid-bg"></div>
-                <div class="map-park-1"></div>
-                <div class="map-park-2"></div>
-                <div class="map-river"></div>
-
-                <!-- Animated GPS Trace SVG -->
-                <svg
-                  viewBox="0 0 400 400"
-                  preserveAspectRatio="xMidYMid meet"
-                  style="position: absolute; inset: 0; width: 100%; height: 100%;"
-                >
-                  <path
-                    d=${routeD}
-                    fill="none"
-                    stroke="#17140F"
-                    stroke-width="13"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  ></path>
-                  <path
-                    d=${routeD}
-                    fill="none"
-                    stroke="#FF5A3C"
-                    stroke-width="7"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  ></path>
-                  <circle cx=${startX} cy=${startY} r="9" fill="#FFCE2E" stroke="#17140F" stroke-width="3.5"></circle>
-                  <circle cx=${headX} cy=${headY} r="9" fill="#1FC99B" stroke="#17140F" stroke-width="3.5"></circle>
-                </svg>
+                <div id="live-leaflet-map"></div>
 
                 <div class="minimize-btn" @click=${() => appState.minimizeWalk()}>&#8595;</div>
                 <div class="live-status-pill">
@@ -565,6 +935,11 @@ let DootyWalk = class DootyWalk extends LitElement {
                     ${isKo ? '실시간 산책' : 'LIVE WALK'}
                   </div>
                 </div>
+
+                <button class="recenter-fab" @click=${() => this.handleRecenterLive()}>
+                  <span>🎯</span>
+                  <span>${isKo ? '내 위치' : 'Recenter'}</span>
+                </button>
               </div>
 
               <!-- Bottom Controls Panel -->
@@ -577,7 +952,7 @@ let DootyWalk = class DootyWalk extends LitElement {
                     <div class="main-timer">${timeStr}</div>
                   </div>
                   <div style="text-align: right; flex: none;">
-                    <div style="font-family: var(--font-heading); font-weight: 800; font-size: 26px; color: #17140F; line-height: 1; letter-spacing: -1px;">
+                    <div style="font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif); font-weight: 800; font-size: 26px; color: #17140F; line-height: 1; letter-spacing: -1px;">
                       ${kmStr}
                     </div>
                     <div style="font-size: 9.5px; font-weight: 800; letter-spacing: 1.2px; color: #9A9080;">
@@ -614,7 +989,7 @@ let DootyWalk = class DootyWalk extends LitElement {
                     <div style="width:9px; height:11px; background:#17140F; border-radius:2px 2px 0 0;"></div>
                   </div>
                   <div style="flex: 1; min-width: 0;">
-                    <div style="font-family: var(--font-heading); font-weight: 800; font-size: 23px; color: #17140F; letter-spacing: -0.8px; line-height: 1.1;">
+                    <div style="font-family: var(--font-heading, 'Bricolage Grotesque', sans-serif); font-weight: 800; font-size: 23px; color: #17140F; letter-spacing: -0.8px; line-height: 1.1;">
                       ${isKo ? '집에 도착하신 것 같아요' : "Looks like you're home"}
                     </div>
                     <div style="font-size: 12.5px; font-weight: 700; color: #6A6152; margin-top: 2px;">
@@ -628,7 +1003,7 @@ let DootyWalk = class DootyWalk extends LitElement {
                     <div style="font-size:9.5px; font-weight:800; letter-spacing:1.2px; color:#9A9080; text-transform:uppercase;">
                       ${isKo ? '소요 시간' : 'DURATION'}
                     </div>
-                    <div style="font-family:var(--font-heading); font-weight:800; font-size:22px; color:#17140F; letter-spacing:-0.8px; line-height:1.2;">
+                    <div style="font-family:var(--font-heading, 'Bricolage Grotesque', sans-serif); font-weight:800; font-size:22px; color:#17140F; letter-spacing:-0.8px; line-height:1.2;">
                       ${timeStr}
                     </div>
                   </div>
@@ -637,7 +1012,7 @@ let DootyWalk = class DootyWalk extends LitElement {
                     <div style="font-size:9.5px; font-weight:800; letter-spacing:1.2px; color:#9A9080; text-transform:uppercase;">
                       ${isKo ? '거리' : 'DISTANCE'}
                     </div>
-                    <div style="font-family:var(--font-heading); font-weight:800; font-size:22px; color:#17140F; letter-spacing:-0.8px; line-height:1.2;">
+                    <div style="font-family:var(--font-heading, 'Bricolage Grotesque', sans-serif); font-weight:800; font-size:22px; color:#17140F; letter-spacing:-0.8px; line-height:1.2;">
                       ${kmStr} km
                     </div>
                   </div>
@@ -677,36 +1052,9 @@ let DootyWalk = class DootyWalk extends LitElement {
                   </div>
                 </div>
 
-                <!-- Map Preview Box -->
+                <!-- Real Leaflet Map Preview Box -->
                 <div class="map-preview-box">
-                  <div class="map-grid-bg"></div>
-                  <div class="map-park-1"></div>
-                  <div class="map-park-2"></div>
-                  <div class="map-river"></div>
-                  <svg
-                    viewBox="0 0 400 400"
-                    preserveAspectRatio="xMidYMid meet"
-                    style="position: absolute; inset: 0; width: 100%; height: 100%;"
-                  >
-                    <path
-                      d=${routeD}
-                      fill="none"
-                      stroke="#17140F"
-                      stroke-width="13"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    ></path>
-                    <path
-                      d=${routeD}
-                      fill="none"
-                      stroke="#FF5A3C"
-                      stroke-width="7"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    ></path>
-                    <circle cx=${startX} cy=${startY} r="9" fill="#FFCE2E" stroke="#17140F" stroke-width="3.5"></circle>
-                    <circle cx=${headX} cy=${headY} r="9" fill="#1FC99B" stroke="#17140F" stroke-width="3.5"></circle>
-                  </svg>
+                  <div id="summary-leaflet-map"></div>
                 </div>
 
                 <!-- 3 KPI Tiles -->
@@ -731,6 +1079,22 @@ let DootyWalk = class DootyWalk extends LitElement {
                     <div class="detail-lbl">${isKo ? '참여' : 'WHO'}</div>
                     <div class="detail-val">${appState.walkSummaryData.petNames.join(' & ')}</div>
                   </div>
+                  ${appState.walkSummaryData.startLocationName
+                ? html `
+                        <div class="detail-item">
+                          <div class="detail-lbl">${isKo ? '출발지' : 'START'}</div>
+                          <div class="detail-val">${appState.walkSummaryData.startLocationName}</div>
+                        </div>
+                      `
+                : null}
+                  ${appState.walkSummaryData.endLocationName
+                ? html `
+                        <div class="detail-item">
+                          <div class="detail-lbl">${isKo ? '도착지' : 'END'}</div>
+                          <div class="detail-val">${appState.walkSummaryData.endLocationName}</div>
+                        </div>
+                      `
+                : null}
                   <div class="detail-item">
                     <div class="detail-lbl">${isKo ? '작성자' : 'LOGGED BY'}</div>
                     <div class="detail-val">${appState.currentUser?.displayName || 'Me'}</div>

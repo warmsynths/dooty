@@ -28,6 +28,15 @@ export declare class DootySheet extends LitElement {
     private weatherText;
     private isFetchingWeather;
     private isSaving;
+    private startLat?;
+    private startLng?;
+    private startLocationName;
+    private isLocatingStart;
+    private endLat?;
+    private endLng?;
+    private endLocationName;
+    private isLocatingEnd;
+    private activeMapPickerTarget;
     private unsubscribe?;
     private fileInput?;
     private wasOpen;
@@ -64,6 +73,10 @@ export declare class DootySheet extends LitElement {
     private setNow;
     private handleSave;
     private handleDelete;
+    private openMapPickerFor;
+    private fetchStartGPS;
+    private fetchEndGPS;
+    private tryReverseGeocodeForTarget;
     private handleSpotSelected;
     private close;
     render(): import("lit-html").TemplateResult<1> | null;

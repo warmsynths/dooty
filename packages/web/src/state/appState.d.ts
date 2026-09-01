@@ -49,6 +49,16 @@ declare class AppStateManager {
         pausedAt: number | null;
         route: [number, number][];
         petIds: string[];
+        currentLat?: number;
+        currentLng?: number;
+        startLat?: number;
+        startLng?: number;
+        startLocationName?: string;
+        endLat?: number;
+        endLng?: number;
+        endLocationName?: string;
+        distanceMeters: number;
+        geoWatchId?: number;
     } | null;
     walkView: 'live' | 'summary' | null;
     walkHomeAsk: boolean;
@@ -62,6 +72,12 @@ declare class AppStateManager {
         petNames: string[];
         startTime: string;
         endTime: string;
+        startLat?: number;
+        startLng?: number;
+        startLocationName?: string;
+        endLat?: number;
+        endLng?: number;
+        endLocationName?: string;
     } | null;
     constructor();
     subscribe(listener: Listener): () => void;
@@ -80,6 +96,8 @@ declare class AppStateManager {
     setHistorySearchOpen(open: boolean): void;
     setHistorySearchQuery(query: string): void;
     startLiveWalk(petIds?: string[]): void;
+    private computeDistanceMeters;
+    private tryReverseGeocodeForWalk;
     getWalkSeconds(): number;
     getWalkDistanceKm(): string;
     getWalkPace(): string;

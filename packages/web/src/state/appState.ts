@@ -101,6 +101,16 @@ class AppStateManager {
     pausedAt: number | null;
     route: [number, number][];
     petIds: string[];
+    currentLat?: number;
+    currentLng?: number;
+    startLat?: number;
+    startLng?: number;
+    startLocationName?: string;
+    endLat?: number;
+    endLng?: number;
+    endLocationName?: string;
+    distanceMeters: number;
+    geoWatchId?: number;
   } | null = null;
   walkView: 'live' | 'summary' | null = null;
   walkHomeAsk: boolean = false;
@@ -114,6 +124,12 @@ class AppStateManager {
     petNames: string[];
     startTime: string;
     endTime: string;
+    startLat?: number;
+    startLng?: number;
+    startLocationName?: string;
+    endLat?: number;
+    endLng?: number;
+    endLocationName?: string;
   } | null = null;
 
 
@@ -288,6 +304,10 @@ class AppStateManager {
   // --- Live Walk Tracking Methods ---
   startLiveWalk(petIds?: string[]) {
     if (this.walkTimerInterval) clearInterval(this.walkTimerInterval);
+    if (this.activeWalk?.geoWatchId !== undefined && typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.clearWatch(this.activeWalk.geoWatchId);
+    }
+
     const chosenPetIds = petIds && petIds.length > 0 ? petIds : this.currentPet ? [this.currentPet.id] : [];
     this.activeWalk = {
       startTime: Date.now(),
@@ -295,24 +315,110 @@ class AppStateManager {
       pausedAt: null,
       route: [],
       petIds: chosenPetIds,
+      distanceMeters: 0,
     };
     this.walkView = 'live';
     this.walkHomeAsk = false;
     this.homeAsked = false;
     this.walkSummaryData = null;
+
+    // Start geolocation watcher
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      this.activeWalk.geoWatchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (!this.activeWalk || this.activeWalk.pausedAt) return;
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) return;
+
+          const prevPoints = this.activeWalk.route;
+          if (prevPoints.length === 0) {
+            this.activeWalk.startLat = lat;
+            this.activeWalk.startLng = lng;
+            this.activeWalk.currentLat = lat;
+            this.activeWalk.currentLng = lng;
+            this.activeWalk.route = [[lat, lng]];
+            this.tryReverseGeocodeForWalk(lat, lng, true);
+          } else {
+            const last = prevPoints[prevPoints.length - 1];
+            const dist = this.computeDistanceMeters(last[0], last[1], lat, lng);
+            // Ignore noise (< 1.5m) or impossible teleports (> 500m per tick)
+            if (dist >= 1.5 && dist < 500) {
+              this.activeWalk.distanceMeters += dist;
+              this.activeWalk.route = [...prevPoints, [lat, lng]];
+            }
+            this.activeWalk.currentLat = lat;
+            this.activeWalk.currentLng = lng;
+          }
+          this.notify();
+        },
+        (err) => {
+          console.warn('Live walk GPS tracking error:', err);
+        },
+        { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+      );
+    }
+
     this.notify();
 
     // Start tick interval
     this.walkTimerInterval = setInterval(() => {
       if (!this.activeWalk || this.activeWalk.pausedAt) return;
       const sec = this.getWalkSeconds();
-      // Auto home check prompt after 25s (test mock) or geo arrival
+      // Auto home check prompt after 120s
       if (!this.homeAsked && sec >= 120) {
         this.walkHomeAsk = true;
         this.homeAsked = true;
       }
       this.notify();
     }, 1000);
+  }
+
+  private computeDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371e3; // meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  private async tryReverseGeocodeForWalk(lat: number, lng: number, isStart: boolean) {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const road =
+          data.address?.road ||
+          data.address?.pedestrian ||
+          data.address?.suburb ||
+          data.address?.neighbourhood;
+        const city =
+          data.address?.city ||
+          data.address?.town ||
+          data.address?.village ||
+          data.address?.county;
+        const name =
+          road && city
+            ? `${road}, ${city}`
+            : road || (data.display_name ? data.display_name.split(',').slice(0, 2).join(',').trim() : '');
+        if (name && this.activeWalk) {
+          if (isStart) this.activeWalk.startLocationName = name;
+          else this.activeWalk.endLocationName = name;
+          this.notify();
+        }
+      }
+    } catch {
+      // Fallback
+    }
   }
 
   getWalkSeconds(): number {
@@ -323,16 +429,20 @@ class AppStateManager {
   }
 
   getWalkDistanceKm(): string {
+    if (this.activeWalk && this.activeWalk.distanceMeters > 0) {
+      return (this.activeWalk.distanceMeters / 1000).toFixed(2);
+    }
     const sec = this.getWalkSeconds();
-    return (sec / 3600 * 4.8).toFixed(2);
+    return ((sec / 3600) * 4.8).toFixed(2);
   }
 
   getWalkPace(): string {
     const sec = this.getWalkSeconds();
-    if (sec < 60) return "9'40\"";
-    const km = sec / 3600 * 4.8;
-    if (km <= 0) return "9'40\"";
+    if (sec < 20) return "9'40\"";
+    const km = parseFloat(this.getWalkDistanceKm());
+    if (km <= 0.01) return "9'40\"";
     const paceMin = (sec / 60) / km;
+    if (paceMin > 35) return "35'00\"";
     const m = Math.floor(paceMin);
     const s = Math.round((paceMin - m) * 60);
     return `${m}'${String(s).padStart(2, '0')}"`;
@@ -371,6 +481,10 @@ class AppStateManager {
     if (this.walkTimerInterval) clearInterval(this.walkTimerInterval);
     if (!this.activeWalk) return;
 
+    if (this.activeWalk.geoWatchId !== undefined && typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.clearWatch(this.activeWalk.geoWatchId);
+    }
+
     const sec = this.getWalkSeconds();
     const km = parseFloat(this.getWalkDistanceKm());
     const pace = this.getWalkPace();
@@ -382,6 +496,20 @@ class AppStateManager {
     const d1 = new Date();
     const formatTime = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
+    const endLat =
+      this.activeWalk.currentLat ??
+      (this.activeWalk.route.length > 0 ? this.activeWalk.route[this.activeWalk.route.length - 1][0] : undefined);
+    const endLng =
+      this.activeWalk.currentLng ??
+      (this.activeWalk.route.length > 0 ? this.activeWalk.route[this.activeWalk.route.length - 1][1] : undefined);
+
+    this.activeWalk.endLat = endLat;
+    this.activeWalk.endLng = endLng;
+
+    if (endLat !== undefined && endLng !== undefined && !this.activeWalk.endLocationName) {
+      this.tryReverseGeocodeForWalk(endLat, endLng, false);
+    }
+
     this.walkSummaryData = {
       durationSec: sec,
       distanceKm: km,
@@ -390,6 +518,12 @@ class AppStateManager {
       petNames: petNames.length > 0 ? petNames : [this.currentPet?.name || 'Pet'],
       startTime: formatTime(d0),
       endTime: formatTime(d1),
+      startLat: this.activeWalk.startLat,
+      startLng: this.activeWalk.startLng,
+      startLocationName: this.activeWalk.startLocationName,
+      endLat,
+      endLng,
+      endLocationName: this.activeWalk.endLocationName,
     };
 
     this.walkView = 'summary';
@@ -403,7 +537,11 @@ class AppStateManager {
     const minStr = Math.max(1, Math.round(data.durationSec / 60)) + ' min';
     const kmStr = data.distanceKm + ' km';
 
-    // Log walk event
+    if (this.activeWalk?.geoWatchId !== undefined && typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.clearWatch(this.activeWalk.geoWatchId);
+    }
+
+    // Log walk event with start/end metadata and coordinates
     await this.logEvent(
       'walk' as EventType,
       notes || `Walk · ${minStr} · ${kmStr}`,
@@ -412,7 +550,16 @@ class AppStateManager {
         walkDistance: kmStr,
         photoUrl,
         petNames: data.petNames,
-      }
+        startLat: data.startLat,
+        startLng: data.startLng,
+        startLocationName: data.startLocationName,
+        endLat: data.endLat,
+        endLng: data.endLng,
+        endLocationName: data.endLocationName,
+        route: data.route,
+      },
+      data.startLat,
+      data.startLng
     );
 
     this.activeWalk = null;
@@ -425,6 +572,9 @@ class AppStateManager {
 
   discardLiveWalk() {
     if (this.walkTimerInterval) clearInterval(this.walkTimerInterval);
+    if (this.activeWalk?.geoWatchId !== undefined && typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.clearWatch(this.activeWalk.geoWatchId);
+    }
     this.activeWalk = null;
     this.walkView = null;
     this.walkSummaryData = null;
