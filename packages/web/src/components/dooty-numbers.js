@@ -496,10 +496,11 @@ let DootyNumbers = class DootyNumbers extends LitElement {
             : totalCount > 0
                 ? 82
                 : 82;
-        // Longest gap calculation
+        // Longest poop drought calculation
         let maxGapHours = 0;
-        if (events.length >= 2) {
-            const sorted = [...events].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        const poopEventsList = events.filter((e) => e.eventType === 'poop');
+        if (poopEventsList.length >= 2) {
+            const sorted = [...poopEventsList].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
             for (let i = 1; i < sorted.length; i++) {
                 const gap = (new Date(sorted[i].timestamp).getTime() - new Date(sorted[i - 1].timestamp).getTime()) /
                     (1000 * 60 * 60);
