@@ -301,4 +301,14 @@ export interface GetEventsQuery {
     limit?: number;
     offset?: number;
 }
+export interface TreatmentScheduleItem {
+    id: string;
+    petId?: string;
+    name: string;
+    dose: string;
+    every: number;
+    due: number;
+    nextDueAt?: string;
+    lastGivenAt?: string;
+}
 //# sourceMappingURL=index.d.ts.map

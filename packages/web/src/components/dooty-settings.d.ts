@@ -6,6 +6,7 @@ export declare class DootySettings extends LitElement {
     disconnectedCallback(): void;
     private setLanguage;
     private handleExportCsv;
+    private handleExportJson;
     private handleSignOut;
     render(): import("lit-html").TemplateResult<1>;
 }

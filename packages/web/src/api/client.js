@@ -528,5 +528,43 @@ export class ApiClient {
             throw new Error('Failed to fetch walk routes');
         return res.json();
     }
+    // --- TREATMENT SCHEDULES ---
+    static async getTreatmentSchedules(petId) {
+        const res = await trackedFetch(`${API_BASE}/pets/${petId}/treatments`, {
+            headers: getAuthHeaders(),
+        });
+        if (!res.ok)
+            throw new Error('Failed to fetch treatment schedules');
+        return res.json();
+    }
+    static async createTreatmentSchedule(petId, data) {
+        const res = await trackedFetch(`${API_BASE}/pets/${petId}/treatments`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        });
+        if (!res.ok)
+            throw new Error('Failed to create treatment schedule');
+        return res.json();
+    }
+    static async updateTreatmentSchedule(id, data) {
+        const res = await trackedFetch(`${API_BASE}/treatments/${id}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        });
+        if (!res.ok)
+            throw new Error('Failed to update treatment schedule');
+        return res.json();
+    }
+    static async deleteTreatmentSchedule(id) {
+        const res = await trackedFetch(`${API_BASE}/treatments/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        });
+        if (!res.ok)
+            throw new Error('Failed to delete treatment schedule');
+        return res.json();
+    }
 }
 //# sourceMappingURL=client.js.map

@@ -1,4 +1,4 @@
-import { Household, Pet, PetEvent, SupportedLocale, EventType, AuthUser, SignUpDTO, SignInDTO, TimeRangeFilter } from '@dooty/shared';
+import { Household, Pet, PetEvent, SupportedLocale, EventType, AuthUser, SignUpDTO, SignInDTO, TimeRangeFilter, TreatmentScheduleItem } from '@dooty/shared';
 type Listener = () => void;
 export interface PendingInviteItem {
     code: string;
@@ -37,6 +37,8 @@ declare class AppStateManager {
     photoModalTitle: string;
     isLoading: boolean;
     petSwitcherOpen: boolean;
+    treatmentsDrawerOpen: boolean;
+    treatments: TreatmentScheduleItem[];
     historyMonthOffset: number;
     historySelectedDay: number | null;
     historyTypeFilters: string[];
@@ -88,6 +90,63 @@ declare class AppStateManager {
     openPetSwitcher(): void;
     closePetSwitcher(): void;
     selectPetById(petId: string): void;
+    openTreatmentsDrawer(): void;
+    closeTreatmentsDrawer(): void;
+    loadTreatmentsForPet(petId?: string): Promise<void>;
+    saveTreatments(): void;
+    formatTreatmentLeft(due: number): string;
+    formatTreatmentDueDate(dueDays: number): string;
+    getTreatmentEveryLabel(every: number): string;
+    getTreatmentSkin(due: number): {
+        bg: string;
+        chip: string;
+        fg: string;
+        sub: string;
+        anim: string;
+    };
+    getNextTreatment(): {
+        item: null;
+        name: string;
+        tag: string;
+        left: string;
+        date: string;
+        skin: {
+            bg: string;
+            chip: string;
+            fg: string;
+            sub: string;
+            anim: string;
+        };
+    } | {
+        item: TreatmentScheduleItem;
+        name: string;
+        tag: string;
+        left: string;
+        date: string;
+        skin: {
+            bg: string;
+            chip: string;
+            fg: string;
+            sub: string;
+            anim: string;
+        };
+    };
+    giveTreatment(id: string): {
+        title: string;
+        sub: string;
+    };
+    addTreatment(opts: {
+        name: string;
+        dose: string;
+        every: number;
+    }): {
+        title: string;
+        sub: string;
+    };
+    removeTreatment(id: string): {
+        title: string;
+        sub: string;
+    };
     setHistoryMonthOffset(offset: number): void;
     setHistorySelectedDay(day: number | null): void;
     toggleHistoryTypeFilter(typeId: string): void;
@@ -130,6 +189,7 @@ declare class AppStateManager {
     createInvite(roleName?: string): Promise<string>;
     revokeInvite(code: string): Promise<void>;
     exportEventsCsv(): void;
+    exportFullBackupJson(): void;
     init(): Promise<void>;
     selectPet(pet: Pet): Promise<void>;
     selectHousehold(householdId: string): Promise<void>;

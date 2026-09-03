@@ -705,4 +705,94 @@ app.get('/api/pets/:petId/walks', async (c) => {
   }
 });
 
+// --- TREATMENT SCHEDULES ---
+app.get('/api/pets/:petId/treatments', async (c) => {
+  try {
+    const service = new DataService(c.env);
+    const petId = c.req.param('petId');
+    const user = await getAuthUser(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const pet = await service.getPet(petId);
+    if (!pet) {
+      return c.json({ error: 'Pet not found' }, 404);
+    }
+
+    const isMember = await service.isHouseholdMember(user.id, pet.householdId);
+    if (!isMember) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
+
+    const treatments = await service.getTreatmentSchedules(petId);
+    return c.json(treatments || []);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to fetch treatments' }, 500);
+  }
+});
+
+app.post('/api/pets/:petId/treatments', async (c) => {
+  try {
+    const service = new DataService(c.env);
+    const petId = c.req.param('petId');
+    const user = await getAuthUser(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const pet = await service.getPet(petId);
+    if (!pet) {
+      return c.json({ error: 'Pet not found' }, 404);
+    }
+
+    const isMember = await service.isHouseholdMember(user.id, pet.householdId);
+    if (!isMember) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
+
+    const body = await c.req.json();
+    const created = await service.createTreatmentSchedule(pet.householdId, petId, body);
+    return c.json(created, 201);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to create treatment schedule' }, 500);
+  }
+});
+
+app.patch('/api/treatments/:id', async (c) => {
+  try {
+    const service = new DataService(c.env);
+    const id = c.req.param('id');
+    const user = await getAuthUser(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const body = await c.req.json();
+    const updated = await service.updateTreatmentSchedule(id, body);
+    if (!updated) {
+      return c.json({ error: 'Treatment schedule not found' }, 404);
+    }
+    return c.json(updated);
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to update treatment schedule' }, 500);
+  }
+});
+
+app.delete('/api/treatments/:id', async (c) => {
+  try {
+    const service = new DataService(c.env);
+    const id = c.req.param('id');
+    const user = await getAuthUser(c);
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const success = await service.deleteTreatmentSchedule(id);
+    return c.json({ success });
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to delete treatment schedule' }, 500);
+  }
+});
+
 export default app;

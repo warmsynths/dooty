@@ -450,6 +450,19 @@ let DootySettings = class DootySettings extends LitElement {
             },
         }));
     }
+    handleExportJson() {
+        appState.exportFullBackupJson();
+        this.dispatchEvent(new CustomEvent('dooty-toast', {
+            bubbles: true,
+            composed: true,
+            detail: {
+                title: appState.currentLocale === 'ko' ? '전체 백업 다운로드 완료' : 'Full Backup Downloaded',
+                sub: appState.currentLocale === 'ko'
+                    ? '반려동물, 기록, 산책 및 투약 일정이 JSON으로 저장되었습니다.'
+                    : 'Complete JSON backup saved to your device.',
+            },
+        }));
+    }
     handleSignOut() {
         appState.signOut();
         this.dispatchEvent(new CustomEvent('dooty-toast', {
@@ -818,6 +831,20 @@ let DootySettings = class DootySettings extends LitElement {
                 </div>
                 <div style="font-size: 11.5px; font-weight: 600; color: #6A6152; margin-top: 1px; line-height: 1.35;">
                   ${t.exportCsvSub}
+                </div>
+              </div>
+            </div>
+
+            <div class="data-tile" @click=${() => this.handleExportJson()}>
+              <div class="tile-icon" style="background: #FFD8A8;">💾</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 13.5px; font-weight: 800; color: #17140F;">
+                  ${isKo ? '전체 데이터 백업 (JSON)' : 'Full Backup (JSON)'}
+                </div>
+                <div style="font-size: 11.5px; font-weight: 600; color: #6A6152; margin-top: 1px; line-height: 1.35;">
+                  ${isKo
+            ? '반려동물, 기록, 산책 GPS 및 투약 일정 전체를 백업합니다.'
+            : 'Download complete backup of pets, logs, walks & schedules.'}
                 </div>
               </div>
             </div>

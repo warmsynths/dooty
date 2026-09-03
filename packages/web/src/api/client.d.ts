@@ -1,4 +1,4 @@
-import { Household, Pet, PetEvent, CreateEventDTO, UpdateEventDTO, CreateHouseholdDTO, PetAnalytics, DogNotesImportItem, WalkRoute, SignUpDTO, SignInDTO, AuthSessionResponse, GetEventsQuery } from '@dooty/shared';
+import { Household, Pet, PetEvent, CreateEventDTO, UpdateEventDTO, CreateHouseholdDTO, PetAnalytics, DogNotesImportItem, WalkRoute, SignUpDTO, SignInDTO, AuthSessionResponse, GetEventsQuery, TreatmentScheduleItem } from '@dooty/shared';
 export declare function onApiActivityChange(listener: (count: number) => void): () => void;
 export declare function getActiveApiCount(): number;
 export declare function trackedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
@@ -42,5 +42,22 @@ export declare class ApiClient {
     }): Promise<PetAnalytics>;
     static saveWalkRoute(walk: Partial<WalkRoute>): Promise<WalkRoute>;
     static getWalkRoutes(petId: string): Promise<WalkRoute[]>;
+    static getTreatmentSchedules(petId: string): Promise<TreatmentScheduleItem[]>;
+    static createTreatmentSchedule(petId: string, data: {
+        name: string;
+        dose?: string;
+        every: number;
+        nextDueAt?: string;
+    }): Promise<TreatmentScheduleItem>;
+    static updateTreatmentSchedule(id: string, data: Partial<{
+        name: string;
+        dose: string;
+        every: number;
+        nextDueAt: string;
+        lastGivenAt: string;
+    }>): Promise<TreatmentScheduleItem>;
+    static deleteTreatmentSchedule(id: string): Promise<{
+        success: boolean;
+    }>;
 }
 //# sourceMappingURL=client.d.ts.map

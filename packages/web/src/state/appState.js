@@ -53,6 +53,9 @@ class AppStateManager {
         this.isLoading = false;
         // Pet switcher bottom sheet
         this.petSwitcherOpen = false;
+        // Treatments Drawer & Repeating Schedule
+        this.treatmentsDrawerOpen = false;
+        this.treatments = [];
         // History State
         this.historyMonthOffset = 0;
         this.historySelectedDay = null;
@@ -124,6 +127,7 @@ class AppStateManager {
                     });
                 }
                 this.loadPendingInvites();
+                this.loadTreatmentsForPet();
             }
             catch (e) {
                 console.warn('Failed to parse cached household data:', e);
@@ -177,6 +181,265 @@ class AppStateManager {
             this.selectPet(pet);
             this.closePetSwitcher();
         }
+    }
+    // --- Treatments / Preventatives Drawer & Schedule Methods ---
+    openTreatmentsDrawer() {
+        this.treatmentsDrawerOpen = true;
+        this.notify();
+    }
+    closeTreatmentsDrawer() {
+        this.treatmentsDrawerOpen = false;
+        this.notify();
+    }
+    async loadTreatmentsForPet(petId) {
+        const targetPetId = petId || this.currentPet?.id || 'default';
+        const key = `dooty_treatments_${targetPetId}`;
+        const stored = localStorage.getItem(key);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                const now = new Date();
+                now.setHours(0, 0, 0, 0);
+                this.treatments = parsed.map((item) => {
+                    if (item.nextDueAt) {
+                        const target = new Date(item.nextDueAt);
+                        target.setHours(0, 0, 0, 0);
+                        const diffDays = Math.round((target.getTime() - now.getTime()) / 86400000);
+                        return { ...item, due: diffDays };
+                    }
+                    return item;
+                });
+            }
+            catch (e) {
+                console.warn('Failed to parse stored treatments:', e);
+            }
+        }
+        else {
+            // Default sample treatments matching Dooty design prototype
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            this.treatments = [
+                {
+                    id: 'trt_flea_tick',
+                    petId: targetPetId,
+                    name: 'Flea & tick',
+                    dose: 'Bravecto spot-on',
+                    every: 90,
+                    due: 2,
+                    nextDueAt: new Date(now.getTime() + 2 * 86400000).toISOString(),
+                },
+                {
+                    id: 'trt_heartworm',
+                    petId: targetPetId,
+                    name: 'Heartworm',
+                    dose: 'Milbemax chew',
+                    every: 30,
+                    due: 12,
+                    nextDueAt: new Date(now.getTime() + 12 * 86400000).toISOString(),
+                },
+                {
+                    id: 'trt_dewormer',
+                    petId: targetPetId,
+                    name: 'Dewormer',
+                    dose: 'Panacur, 3 days',
+                    every: 90,
+                    due: -3,
+                    nextDueAt: new Date(now.getTime() - 3 * 86400000).toISOString(),
+                },
+            ];
+            this.saveTreatments();
+        }
+        // Cloud synchronization via BFF / Supabase if authenticated
+        if (this.isAuthenticated && targetPetId && targetPetId !== 'default') {
+            try {
+                const cloudTreatments = await ApiClient.getTreatmentSchedules(targetPetId);
+                if (cloudTreatments && cloudTreatments.length > 0) {
+                    this.treatments = cloudTreatments;
+                    this.saveTreatments();
+                    this.notify();
+                }
+            }
+            catch (err) {
+                console.warn('Could not sync treatment schedules from cloud:', err);
+            }
+        }
+    }
+    saveTreatments() {
+        const targetPetId = this.currentPet?.id || 'default';
+        const key = `dooty_treatments_${targetPetId}`;
+        localStorage.setItem(key, JSON.stringify(this.treatments));
+    }
+    formatTreatmentLeft(due) {
+        const isKo = this.currentLocale === 'ko';
+        if (due < 0) {
+            const abs = Math.abs(due);
+            return isKo ? `${abs}일 지남` : `${abs} ${abs === 1 ? 'day late' : 'days late'}`;
+        }
+        if (due === 0)
+            return isKo ? '오늘' : 'Today';
+        if (due === 1)
+            return isKo ? '내일' : 'Tomorrow';
+        return isKo ? `${due}일 후` : `in ${due} days`;
+    }
+    formatTreatmentDueDate(dueDays) {
+        const dt = new Date();
+        dt.setDate(dt.getDate() + dueDays);
+        const monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        if (this.currentLocale === 'ko') {
+            return `${dt.getMonth() + 1}월 ${dt.getDate()}일`;
+        }
+        return `${dt.getDate()} ${monthsEn[dt.getMonth()]}`;
+    }
+    getTreatmentEveryLabel(every) {
+        const isKo = this.currentLocale === 'ko';
+        switch (every) {
+            case 7:
+                return isKo ? '1주일' : 'week';
+            case 30:
+                return isKo ? '1개월' : 'month';
+            case 90:
+                return isKo ? '3개월' : '3 months';
+            case 180:
+                return isKo ? '6개월' : '6 months';
+            case 365:
+                return isKo ? '1년' : 'year';
+            default:
+                return isKo ? `${every}일` : `${every} days`;
+        }
+    }
+    getTreatmentSkin(due) {
+        const late = due < 0;
+        const soon = due >= 0 && due <= 3;
+        return {
+            bg: late ? '#FF5A3C' : soon ? '#FF9A3C' : '#FFF',
+            chip: late || soon ? '#FFF' : '#BFD0FF',
+            fg: late ? '#FFF' : '#17140F',
+            sub: late ? 'rgba(255,255,255,0.82)' : soon ? '#7A3F00' : '#6A6152',
+            anim: late ? 'tb-nudge 3s ease-in-out infinite' : 'none',
+        };
+    }
+    getNextTreatment() {
+        const isKo = this.currentLocale === 'ko';
+        const sorted = this.treatments.slice().sort((a, b) => a.due - b.due);
+        if (sorted.length === 0) {
+            return {
+                item: null,
+                name: isKo ? '등록된 일정 없음' : 'Nothing scheduled',
+                tag: 'M',
+                left: '—',
+                date: isKo ? '일정 추가' : 'add one',
+                skin: {
+                    bg: '#FFFBF2',
+                    chip: '#E8DFCB',
+                    fg: '#17140F',
+                    sub: '#9A9080',
+                    anim: 'none',
+                },
+            };
+        }
+        const nx = sorted[0];
+        return {
+            item: nx,
+            name: nx.name,
+            tag: nx.name.trim().charAt(0).toUpperCase() || 'M',
+            left: this.formatTreatmentLeft(nx.due),
+            date: this.formatTreatmentDueDate(nx.due),
+            skin: this.getTreatmentSkin(nx.due),
+        };
+    }
+    giveTreatment(id) {
+        const isKo = this.currentLocale === 'ko';
+        const item = this.treatments.find((t) => t.id === id);
+        if (!item)
+            return { title: '', sub: '' };
+        const nextDueAt = new Date(Date.now() + item.every * 86400000).toISOString();
+        this.treatments = this.treatments.map((t) => t.id === id
+            ? {
+                ...t,
+                due: t.every,
+                lastGivenAt: new Date().toISOString(),
+                nextDueAt,
+            }
+            : t);
+        this.saveTreatments();
+        // Automatically record a medicine event in Dooty's database/log
+        if (this.currentHousehold && this.currentPet) {
+            this.logEvent('medicine', `${item.name}${item.dose ? ' · ' + item.dose : ''}`, {
+                medication: item.name,
+                dosage: item.dose,
+                treatmentScheduleId: item.id,
+            }).catch((e) => console.warn('Could not auto-log treatment event:', e));
+        }
+        // Sync update to backend if authenticated
+        if (this.isAuthenticated) {
+            ApiClient.updateTreatmentSchedule(id, {
+                nextDueAt,
+                lastGivenAt: new Date().toISOString(),
+            }).catch((e) => console.warn('Could not sync treatment update to server:', e));
+        }
+        const title = isKo ? `${item.name} 투약 완료` : `${item.name} given`;
+        const sub = isKo
+            ? `다음 예정일: ${this.formatTreatmentDueDate(item.every)}`
+            : `Next one due ${this.formatTreatmentDueDate(item.every)}.`;
+        this.notify();
+        return { title, sub };
+    }
+    addTreatment(opts) {
+        const isKo = this.currentLocale === 'ko';
+        const name = opts.name.trim();
+        if (!name)
+            return { title: '', sub: '' };
+        const id = 'trt_' + Date.now();
+        const nextDueAt = new Date(Date.now() + opts.every * 86400000).toISOString();
+        const newItem = {
+            id,
+            petId: this.currentPet?.id,
+            name,
+            dose: opts.dose.trim() || (isKo ? '복용량 미입력' : 'no dose noted'),
+            every: opts.every,
+            due: opts.every,
+            nextDueAt,
+        };
+        this.treatments = [...this.treatments, newItem];
+        this.saveTreatments();
+        // Sync creation to backend if authenticated
+        if (this.isAuthenticated && this.currentPet) {
+            ApiClient.createTreatmentSchedule(this.currentPet.id, {
+                name: newItem.name,
+                dose: newItem.dose,
+                every: newItem.every,
+                nextDueAt: newItem.nextDueAt,
+            })
+                .then((serverItem) => {
+                if (serverItem && serverItem.id) {
+                    this.treatments = this.treatments.map((t) => (t.id === id ? serverItem : t));
+                    this.saveTreatments();
+                    this.notify();
+                }
+            })
+                .catch((e) => console.warn('Could not sync treatment creation to server:', e));
+        }
+        const title = isKo ? `${newItem.name} 추가됨` : `${newItem.name} added`;
+        const sub = isKo
+            ? `첫 투약 예정일: ${this.formatTreatmentDueDate(opts.every)}`
+            : `First one due ${this.formatTreatmentDueDate(opts.every)}.`;
+        this.notify();
+        return { title, sub };
+    }
+    removeTreatment(id) {
+        const isKo = this.currentLocale === 'ko';
+        const item = this.treatments.find((t) => t.id === id);
+        this.treatments = this.treatments.filter((t) => t.id !== id);
+        this.saveTreatments();
+        // Sync deletion to backend if authenticated
+        if (this.isAuthenticated) {
+            ApiClient.deleteTreatmentSchedule(id).catch((e) => console.warn('Could not sync treatment deletion to server:', e));
+        }
+        this.notify();
+        return {
+            title: isKo ? `${item?.name || '일정'} 삭제됨` : `${item?.name || 'Treatment'} removed`,
+            sub: isKo ? '반복 일정에서 제외되었습니다.' : 'Removed from repeating schedule.',
+        };
     }
     // --- History Management Methods ---
     setHistoryMonthOffset(offset) {
@@ -655,6 +918,30 @@ class AppStateManager {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     }
+    exportFullBackupJson() {
+        const backupData = {
+            app: 'Dooty',
+            version: '1.0',
+            exportedAt: new Date().toISOString(),
+            household: this.currentHousehold,
+            pets: this.pets,
+            currentPet: this.currentPet,
+            treatments: this.treatments,
+            events: this.events,
+        };
+        const jsonString = JSON.stringify(backupData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        const dateStr = new Date().toISOString().split('T')[0];
+        const petName = (this.currentPet?.name || 'dooty').toLowerCase();
+        link.setAttribute('download', `dooty-${petName}-backup-${dateStr}.json`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
     async init() {
         this.isLoading = true;
         this.notify();
@@ -764,6 +1051,7 @@ class AppStateManager {
     async selectPet(pet) {
         this.currentPet = pet;
         localStorage.setItem('dooty_pet_id', pet.id);
+        this.loadTreatmentsForPet(pet.id);
         this.events = await getEventsOffline(pet.id);
         this.notify();
         this.syncEvents();

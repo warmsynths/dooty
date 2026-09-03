@@ -357,3 +357,14 @@ export interface GetEventsQuery {
   limit?: number;
   offset?: number;
 }
+
+export interface TreatmentScheduleItem {
+  id: string;
+  petId?: string;
+  name: string;
+  dose: string;
+  every: number; // recurrence interval in days: 7, 30, 90, 180, 365
+  due: number; // days until next dose (negative = overdue, 0 = today, 1 = tomorrow)
+  nextDueAt?: string; // ISO date string
+  lastGivenAt?: string;
+}

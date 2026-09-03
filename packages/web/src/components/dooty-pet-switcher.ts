@@ -19,18 +19,23 @@ export class DootyPetSwitcher extends LitElement {
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
+      align-items: center;
       animation: tb-scrim 0.2s ease both;
     }
 
     .modal-sheet {
       position: relative;
       background: #FFFBF2;
-      border-top: 3px solid #17140F;
+      border: 3px solid #17140F;
+      border-bottom: none;
       border-radius: 30px 30px 0 0;
       padding: 18px 18px 34px;
       display: flex;
       flex-direction: column;
       gap: 13px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 -10px 32px rgba(23, 20, 15, 0.25);
       max-height: 78vh;
       box-sizing: border-box;
       animation: tb-sheet 0.25s cubic-bezier(0.23, 1, 0.32, 1) both;

@@ -203,10 +203,10 @@ export class DootyHome extends LitElement {
     .pred-time {
       font-family: var(--font-heading);
       font-weight: 800;
-      font-size: clamp(28px, 8vw, 38px);
+      font-size: clamp(34px, 10vw, 44px);
       color: #17140F;
-      line-height: 1.08;
-      letter-spacing: -1.2px;
+      line-height: 1;
+      letter-spacing: -2px;
       margin-top: 3px;
       word-break: keep-all;
     }
@@ -242,6 +242,99 @@ export class DootyHome extends LitElement {
       border-right: 2.5px solid #17140F;
       box-sizing: border-box;
       transition: width 0.3s ease;
+    }
+
+    /* Next Medicine / Treatment Info Pill */
+    .next-treatment-pill {
+      margin-top: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 2.5px solid #17140F;
+      border-radius: 15px;
+      padding: 8px 10px;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 #17140F;
+      user-select: none;
+      transition: transform 0.13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.13s cubic-bezier(0.23, 1, 0.32, 1), background-color 0.16s ease;
+    }
+
+    .next-treatment-pill:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0 #17140F;
+    }
+
+    .next-treatment-pill:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0 #17140F;
+    }
+
+    .treatment-pill-chip {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+      flex: none;
+      border: 2.5px solid #17140F;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 12px;
+      color: #17140F;
+    }
+
+    .treatment-pill-chip.animated {
+      animation: tb-nudge 3s ease-in-out infinite;
+    }
+
+    .treatment-pill-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .treatment-pill-sub {
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .treatment-pill-name {
+      font-size: 13px;
+      font-weight: 800;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+
+    .treatment-pill-meta {
+      flex: none;
+      text-align: right;
+    }
+
+    .treatment-pill-left {
+      font-size: 12.5px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .treatment-pill-date {
+      font-size: 10px;
+      font-weight: 700;
+      margin-top: 1px;
+      line-height: 1.1;
+    }
+
+    .treatment-pill-arrow {
+      font-family: var(--font-heading);
+      font-weight: 800;
+      font-size: 17px;
+      flex: none;
+      line-height: 1;
     }
 
     /* KPI Row */
@@ -537,6 +630,7 @@ export class DootyHome extends LitElement {
 
     const petAvatar = appState.currentPet?.avatarUrl;
     const userInitial = (appState.currentUser?.displayName || 'S').charAt(0).toUpperCase();
+    const nextTreatment = appState.getNextTreatment();
 
     return html`
       <!-- Top Header Row -->
@@ -596,6 +690,54 @@ export class DootyHome extends LitElement {
         <div class="pred-sub">${predSubText}</div>
         <div class="pred-progress-bar">
           <div class="pred-progress-fill" style="width: ${progressFillPct}%;"></div>
+        </div>
+
+        <!-- Next Medicine / Treatment Info Pill -->
+        <div
+          class="next-treatment-pill"
+          style="background: ${nextTreatment.skin.bg};"
+          @click=${() => appState.openTreatmentsDrawer()}
+        >
+          <div
+            class="treatment-pill-chip ${nextTreatment.skin.anim !== 'none' ? 'animated' : ''}"
+            style="background: ${nextTreatment.skin.chip};"
+          >
+            ${nextTreatment.tag}
+          </div>
+          <div class="treatment-pill-body">
+            <div
+              class="treatment-pill-sub"
+              style="color: ${nextTreatment.skin.sub};"
+            >
+              ${isKo ? '다음 투약 / 치료' : 'Next treatment'}
+            </div>
+            <div
+              class="treatment-pill-name"
+              style="color: ${nextTreatment.skin.fg};"
+            >
+              ${nextTreatment.name}
+            </div>
+          </div>
+          <div class="treatment-pill-meta">
+            <div
+              class="treatment-pill-left"
+              style="color: ${nextTreatment.skin.fg};"
+            >
+              ${nextTreatment.left}
+            </div>
+            <div
+              class="treatment-pill-date"
+              style="color: ${nextTreatment.skin.sub};"
+            >
+              ${nextTreatment.date}
+            </div>
+          </div>
+          <div
+            class="treatment-pill-arrow"
+            style="color: ${nextTreatment.skin.sub};"
+          >
+            &#8250;
+          </div>
         </div>
       </div>
 
