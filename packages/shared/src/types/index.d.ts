@@ -255,9 +255,12 @@ export interface DailyFrequency {
     other: number;
     total: number;
 }
+export type PredictionReason = 'routine_peak' | 'meal_boost' | 'walk_boost' | 'cadence_interval' | 'overdue' | 'cold_start';
 export interface NextPoopPrediction {
     hasData: boolean;
     predictedTimestamp: string | null;
+    windowStart?: string | null;
+    windowEnd?: string | null;
     timeDisplay: string;
     timeDisplayKo: string;
     subtext: string;
@@ -267,6 +270,7 @@ export interface NextPoopPrediction {
     isTomorrow: boolean;
     confidence: 'low' | 'medium' | 'high';
     estimatedHoursRemaining?: number;
+    predictionReason?: PredictionReason;
 }
 export interface PetAnalytics {
     petId: string;

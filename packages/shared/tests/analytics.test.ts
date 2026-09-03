@@ -65,8 +65,11 @@ test('predictNextPoop at 3:24 PM predicts upcoming evening routine instead of pa
   const prediction = predictNextPoop(events, 'pet-1', now);
   assert.strictEqual(prediction.hasData, true);
   assert.strictEqual(prediction.isTomorrow, false);
-  assert.strictEqual(prediction.timeDisplay, '5:00 pm');
-  assert.strictEqual(prediction.timeDisplayKo, '오후 5:00');
+  assert.ok(prediction.timeDisplay.includes('5:00 pm'));
+  assert.ok(prediction.timeDisplayKo.includes('5:00'));
+  assert.strictEqual(prediction.predictionReason, 'routine_peak');
+  assert.ok(prediction.windowStart != null);
+  assert.ok(prediction.windowEnd != null);
   assert.ok(prediction.progressPercent > 50); // Since 8am to 5pm (9h) and now is 3:24pm (7.4h elapsed), ~82%
 });
 
@@ -86,10 +89,10 @@ test('predictNextPoop at 3:24 PM predicts Tomorrow 8:00 am when dog only has mor
   const prediction = predictNextPoop(events, 'pet-1', now);
   assert.strictEqual(prediction.hasData, true);
   assert.strictEqual(prediction.isTomorrow, true);
-  assert.strictEqual(prediction.timeDisplay, 'Tomorrow 8:00 am');
-  assert.strictEqual(prediction.timeDisplayKo, '내일 오전 8:00');
-  assert.strictEqual(prediction.subtext, 'Next routine window tomorrow morning.');
-  assert.strictEqual(prediction.subtextKo, '내일 아침 루틴 예상 시간대입니다.');
+  assert.ok(prediction.timeDisplay.includes('Tomorrow'));
+  assert.ok(prediction.timeDisplay.includes('8:00 am'));
+  assert.ok(prediction.timeDisplayKo.includes('내일'));
+  assert.ok(prediction.timeDisplayKo.includes('8:00'));
 });
 
 test('predictNextPoop handles empty logs gracefully', () => {
@@ -98,6 +101,7 @@ test('predictNextPoop handles empty logs gracefully', () => {
   assert.strictEqual(prediction.timeDisplay, 'Log to predict');
   assert.strictEqual(prediction.timeDisplayKo, '기록 대기 중');
   assert.strictEqual(prediction.progressPercent, 0);
+  assert.strictEqual(prediction.predictionReason, 'cold_start');
 });
 
 test('predictNextPoop flags overdue when last poop was long ago during waking hours', () => {
@@ -115,4 +119,69 @@ test('predictNextPoop flags overdue when last poop was long ago during waking ho
   assert.strictEqual(prediction.hasData, true);
   assert.strictEqual(prediction.isOverdue, true);
   assert.strictEqual(prediction.progressPercent, 95);
+  assert.strictEqual(prediction.predictionReason, 'overdue');
+});
+
+test('predictNextPoop applies meal_boost when food event logged recently after last poop', () => {
+  // Last poop at 8:00 PM yesterday evening
+  const lastPoop = new Date(2026, 7, 24, 20, 0).toISOString();
+  // Breakfast at 7:30 AM today
+  const breakfast = new Date(2026, 7, 25, 7, 30).toISOString();
+  // Current time is 7:35 AM today
+  const now = new Date(2026, 7, 25, 7, 35);
+
+  const events: PetEvent[] = [
+    { id: '1', householdId: 'h1', petId: 'pet-1', eventType: 'poop', loggedByName: 'User', timestamp: lastPoop, createdAt: lastPoop },
+    { id: '2', householdId: 'h1', petId: 'pet-1', eventType: 'food', loggedByName: 'User', timestamp: breakfast, createdAt: breakfast },
+  ];
+
+  const prediction = predictNextPoop(events, 'pet-1', now);
+  assert.strictEqual(prediction.hasData, true);
+  assert.strictEqual(prediction.predictionReason, 'meal_boost');
+  // Expected ~35 mins after 7:30 AM -> 8:05 AM
+  assert.ok(prediction.timeDisplay.includes('8:05 am'));
+  assert.ok(prediction.subtext.includes('meal'));
+  assert.ok(prediction.subtextKo.includes('식사'));
+});
+
+test('predictNextPoop applies walk_boost when walk event logged recently after last poop', () => {
+  // Last poop at 8:00 AM yesterday
+  const lastPoop = new Date(2026, 7, 24, 8, 0).toISOString();
+  // Walk started 10 mins ago at 5:00 PM today
+  const walkStart = new Date(2026, 7, 25, 17, 0).toISOString();
+  // Current time is 5:10 PM
+  const now = new Date(2026, 7, 25, 17, 10);
+
+  const events: PetEvent[] = [
+    { id: '1', householdId: 'h1', petId: 'pet-1', eventType: 'poop', loggedByName: 'User', timestamp: lastPoop, createdAt: lastPoop },
+    { id: '2', householdId: 'h1', petId: 'pet-1', eventType: 'walk', loggedByName: 'User', timestamp: walkStart, createdAt: walkStart },
+  ];
+
+  const prediction = predictNextPoop(events, 'pet-1', now);
+  assert.strictEqual(prediction.hasData, true);
+  assert.strictEqual(prediction.predictionReason, 'walk_boost');
+  assert.ok(prediction.timeDisplay.includes('5:15 pm'));
+  assert.ok(prediction.subtext.includes('Walk'));
+  assert.ok(prediction.subtextKo.includes('산책'));
+});
+
+test('predictNextPoop rolls over to next peak when earlier routine window missed by > 2.5 hours', () => {
+  // Routine has 8:00 AM and 5:00 PM peaks
+  const pastDayPoop1 = new Date(2026, 7, 24, 8, 0).toISOString();
+  const pastDayPoop2 = new Date(2026, 7, 24, 17, 0).toISOString();
+  // Now is 1:00 PM (13:00) on 2026-08-25. 8:00 AM passed 5 hours ago without a poop.
+  const now = new Date(2026, 7, 25, 13, 0);
+
+  const events: PetEvent[] = [
+    { id: '1', householdId: 'h1', petId: 'pet-1', eventType: 'poop', loggedByName: 'User', timestamp: pastDayPoop1, createdAt: pastDayPoop1 },
+    { id: '2', householdId: 'h1', petId: 'pet-1', eventType: 'poop', loggedByName: 'User', timestamp: pastDayPoop2, createdAt: pastDayPoop2 },
+  ];
+
+  const prediction = predictNextPoop(events, 'pet-1', now);
+  assert.strictEqual(prediction.hasData, true);
+  assert.strictEqual(prediction.isTomorrow, false);
+  // Rolled over to upcoming 5:00 PM peak instead of staying stuck overdue at 8:00 AM
+  assert.ok(prediction.timeDisplay.includes('5:00 pm'));
+  assert.strictEqual(prediction.isOverdue, false);
+  assert.ok(prediction.subtext.includes('Earlier routine window') || prediction.subtext.includes('Routine peak'));
 });

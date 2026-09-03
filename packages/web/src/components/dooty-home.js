@@ -208,6 +208,15 @@ let DootyHome = class DootyHome extends LitElement {
       word-break: keep-all;
     }
 
+    .pred-window-tag {
+      font-size: 0.58em;
+      font-weight: 700;
+      opacity: 0.85;
+      letter-spacing: -0.3px;
+      margin-left: 6px;
+      vertical-align: baseline;
+    }
+
     .pred-sub {
       font-size: 12.5px;
       font-weight: 700;
@@ -500,6 +509,9 @@ let DootyHome = class DootyHome extends LitElement {
         const predTimeStr = isKo ? prediction.timeDisplayKo : prediction.timeDisplay;
         const predSubText = isKo ? prediction.subtextKo : prediction.subtext;
         const progressFillPct = prediction.progressPercent;
+        const timeParts = predTimeStr.includes(' (') ? predTimeStr.split(' (') : [predTimeStr];
+        const mainTimeText = timeParts[0];
+        const windowText = timeParts[1] ? `(${timeParts[1]}` : null;
         const activeDays = Math.max(1, analytics.dailyFrequencies.length);
         const avgPerDay = totalCount > 0 ? (totalCount / activeDays).toFixed(1) : '0.0';
         const petAvatar = appState.currentPet?.avatarUrl;
@@ -555,7 +567,10 @@ let DootyHome = class DootyHome extends LitElement {
         <div class="pred-label">
           ${isKo ? '다음은 아마도' : 'Next one, probably'}
         </div>
-        <div class="pred-time">${predTimeStr}</div>
+        <div class="pred-time">
+          ${mainTimeText}
+          ${windowText ? html `<span class="pred-window-tag">${windowText}</span>` : ''}
+        </div>
         <div class="pred-sub">${predSubText}</div>
         <div class="pred-progress-bar">
           <div class="pred-progress-fill" style="width: ${progressFillPct}%;"></div>
