@@ -12,6 +12,7 @@ import {
   SignInDTO,
   AuthSessionResponse,
   GetEventsQuery,
+  TreatmentScheduleItem,
 } from '@dooty/shared';
 import {
   enqueuePendingEvent,
@@ -591,6 +592,50 @@ export class ApiClient {
       headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error('Failed to fetch walk routes');
+    return res.json();
+  }
+
+  // --- TREATMENT SCHEDULES ---
+  static async getTreatmentSchedules(petId: string): Promise<TreatmentScheduleItem[]> {
+    const res = await trackedFetch(`${API_BASE}/pets/${petId}/treatments`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch treatment schedules');
+    return res.json();
+  }
+
+  static async createTreatmentSchedule(
+    petId: string,
+    data: { name: string; dose?: string; every: number; nextDueAt?: string }
+  ): Promise<TreatmentScheduleItem> {
+    const res = await trackedFetch(`${API_BASE}/pets/${petId}/treatments`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create treatment schedule');
+    return res.json();
+  }
+
+  static async updateTreatmentSchedule(
+    id: string,
+    data: Partial<{ name: string; dose: string; every: number; nextDueAt: string; lastGivenAt: string }>
+  ): Promise<TreatmentScheduleItem> {
+    const res = await trackedFetch(`${API_BASE}/treatments/${id}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update treatment schedule');
+    return res.json();
+  }
+
+  static async deleteTreatmentSchedule(id: string): Promise<{ success: boolean }> {
+    const res = await trackedFetch(`${API_BASE}/treatments/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete treatment schedule');
     return res.json();
   }
 }

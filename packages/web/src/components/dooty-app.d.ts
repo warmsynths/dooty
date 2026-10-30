@@ -16,6 +16,7 @@ import './dooty-photo-modal.js';
 import './dooty-pet-switcher.js';
 import './dooty-walk.js';
 import './dooty-auth.js';
+import './dooty-treatments-drawer.js';
 export declare class DootyApp extends LitElement {
     private activeView;
     private toast;

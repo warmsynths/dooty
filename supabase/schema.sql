@@ -79,10 +79,25 @@ CREATE TABLE IF NOT EXISTS public.walk_routes (
     FOREIGN KEY (pet_id, household_id) REFERENCES public.pets(id, household_id) ON DELETE CASCADE
 );
 
+-- 7. TREATMENT SCHEDULES (Repeating medications, preventatives, flea & tick, etc.)
+CREATE TABLE IF NOT EXISTS public.treatment_schedules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    household_id UUID NOT NULL REFERENCES public.households(id) ON DELETE CASCADE,
+    pet_id UUID NOT NULL REFERENCES public.pets(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    dose TEXT NOT NULL DEFAULT '',
+    every_days INTEGER NOT NULL DEFAULT 30,
+    next_due_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    last_given_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
 -- INDEXES and CONSTRAINTS for performance and deduplication
 CREATE INDEX IF NOT EXISTS idx_events_household_pet ON public.events(household_id, pet_id);
 CREATE INDEX IF NOT EXISTS idx_events_timestamp ON public.events(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_events_type ON public.events(event_type);
+CREATE INDEX IF NOT EXISTS idx_treatment_schedules_pet ON public.treatment_schedules(household_id, pet_id);
 CREATE INDEX IF NOT EXISTS idx_household_members_user ON public.household_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_household_invites_code ON public.household_invites(code);
 ALTER TABLE public.events DROP CONSTRAINT IF EXISTS events_pet_timestamp_type_unique;
@@ -95,6 +110,7 @@ ALTER TABLE public.household_invites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.walk_routes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.treatment_schedules ENABLE ROW LEVEL SECURITY;
 
 -- Helper security functions with explicit search_path
 CREATE OR REPLACE FUNCTION public.is_household_member(h_id UUID)
@@ -265,4 +281,21 @@ CREATE POLICY "Members can update walk routes" ON public.walk_routes
 
 DROP POLICY IF EXISTS "Members can delete walk routes" ON public.walk_routes;
 CREATE POLICY "Members can delete walk routes" ON public.walk_routes
+    FOR DELETE USING (public.is_household_member(household_id));
+
+-- 7. Treatment Schedules policies
+DROP POLICY IF EXISTS "Members can view treatment schedules" ON public.treatment_schedules;
+CREATE POLICY "Members can view treatment schedules" ON public.treatment_schedules
+    FOR SELECT USING (public.is_household_member(household_id));
+
+DROP POLICY IF EXISTS "Members can insert treatment schedules" ON public.treatment_schedules;
+CREATE POLICY "Members can insert treatment schedules" ON public.treatment_schedules
+    FOR INSERT WITH CHECK (public.is_household_member(household_id));
+
+DROP POLICY IF EXISTS "Members can update treatment schedules" ON public.treatment_schedules;
+CREATE POLICY "Members can update treatment schedules" ON public.treatment_schedules
+    FOR UPDATE USING (public.is_household_member(household_id));
+
+DROP POLICY IF EXISTS "Members can delete treatment schedules" ON public.treatment_schedules;
+CREATE POLICY "Members can delete treatment schedules" ON public.treatment_schedules
     FOR DELETE USING (public.is_household_member(household_id));

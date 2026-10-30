@@ -17,6 +17,7 @@ import {
   SignInDTO,
   AuthSessionResponse,
   GetEventsQuery,
+  TreatmentScheduleItem,
 } from '@dooty/shared';
 import { getSupabaseClient, Bindings } from './supabase.js';
 
@@ -26,6 +27,7 @@ const memMembers: HouseholdMember[] = [];
 const memPets: Pet[] = [];
 const memEvents: PetEvent[] = [];
 const memWalks: WalkRoute[] = [];
+const memTreatments: TreatmentScheduleItem[] = [];
 const memInvites = new Map<string, { householdId: string; code: string; expiresAt: string }>();
 
 const isUuid = (id?: string | null): boolean =>
@@ -1542,5 +1544,190 @@ export class DataService {
     }
 
     return memWalks.filter((w) => w.petId === petId);
+  }
+
+  // --- TREATMENT SCHEDULES ---
+  async getTreatmentSchedules(petId: string): Promise<TreatmentScheduleItem[]> {
+    const supabase = getSupabaseClient(this.env);
+    if (supabase && isUuid(petId)) {
+      try {
+        const { data, error } = await supabase
+          .from('treatment_schedules')
+          .select('*')
+          .eq('pet_id', petId)
+          .order('next_due_at', { ascending: true });
+
+        if (!error && data) {
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          return data.map((t: any) => {
+            const nextDue = t.next_due_at ? new Date(t.next_due_at) : new Date();
+            nextDue.setHours(0, 0, 0, 0);
+            const dueDays = Math.round((nextDue.getTime() - now.getTime()) / 86400000);
+            return {
+              id: t.id,
+              petId: t.pet_id,
+              name: t.name,
+              dose: t.dose || '',
+              every: Number(t.every_days || 30),
+              due: dueDays,
+              nextDueAt: t.next_due_at,
+              lastGivenAt: t.last_given_at,
+            };
+          });
+        }
+      } catch (err) {
+        console.warn('Supabase getTreatmentSchedules error:', err);
+      }
+    }
+
+    return memTreatments.filter((t) => t.petId === petId);
+  }
+
+  async createTreatmentSchedule(
+    householdId: string,
+    petId: string,
+    dto: { name: string; dose?: string; every: number; nextDueAt?: string }
+  ): Promise<TreatmentScheduleItem> {
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'trt-' + Date.now();
+    const nextDueAt = dto.nextDueAt || new Date(Date.now() + dto.every * 86400000).toISOString();
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const target = new Date(nextDueAt);
+    target.setHours(0, 0, 0, 0);
+    const dueDays = Math.round((target.getTime() - now.getTime()) / 86400000);
+
+    const supabase = getSupabaseClient(this.env);
+    if (supabase && isUuid(householdId) && isUuid(petId)) {
+      try {
+        const { data, error } = await supabase
+          .from('treatment_schedules')
+          .insert({
+            id,
+            household_id: householdId,
+            pet_id: petId,
+            name: dto.name,
+            dose: dto.dose || '',
+            every_days: dto.every,
+            next_due_at: nextDueAt,
+          })
+          .select()
+          .single();
+
+        if (!error && data) {
+          return {
+            id: data.id,
+            petId: data.pet_id,
+            name: data.name,
+            dose: data.dose || '',
+            every: Number(data.every_days || 30),
+            due: dueDays,
+            nextDueAt: data.next_due_at,
+            lastGivenAt: data.last_given_at,
+          };
+        }
+      } catch (err) {
+        console.warn('Supabase createTreatmentSchedule error:', err);
+      }
+    }
+
+    const item: TreatmentScheduleItem = {
+      id,
+      petId,
+      name: dto.name,
+      dose: dto.dose || '',
+      every: dto.every,
+      due: dueDays,
+      nextDueAt,
+    };
+    memTreatments.push(item);
+    return item;
+  }
+
+  async updateTreatmentSchedule(
+    id: string,
+    dto: Partial<{ name: string; dose: string; every: number; nextDueAt: string; lastGivenAt: string }>
+  ): Promise<TreatmentScheduleItem | null> {
+    const supabase = getSupabaseClient(this.env);
+    if (supabase && isUuid(id)) {
+      try {
+        const payload: Record<string, any> = {
+          updated_at: new Date().toISOString(),
+        };
+        if (dto.name !== undefined) payload.name = dto.name;
+        if (dto.dose !== undefined) payload.dose = dto.dose;
+        if (dto.every !== undefined) payload.every_days = dto.every;
+        if (dto.nextDueAt !== undefined) payload.next_due_at = dto.nextDueAt;
+        if (dto.lastGivenAt !== undefined) payload.last_given_at = dto.lastGivenAt;
+
+        const { data, error } = await supabase
+          .from('treatment_schedules')
+          .update(payload)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (!error && data) {
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          const nextDue = data.next_due_at ? new Date(data.next_due_at) : new Date();
+          nextDue.setHours(0, 0, 0, 0);
+          const dueDays = Math.round((nextDue.getTime() - now.getTime()) / 86400000);
+          return {
+            id: data.id,
+            petId: data.pet_id,
+            name: data.name,
+            dose: data.dose || '',
+            every: Number(data.every_days || 30),
+            due: dueDays,
+            nextDueAt: data.next_due_at,
+            lastGivenAt: data.last_given_at,
+          };
+        }
+      } catch (err) {
+        console.warn('Supabase updateTreatmentSchedule error:', err);
+      }
+    }
+
+    const idx = memTreatments.findIndex((t) => t.id === id);
+    if (idx === -1) return null;
+    const existing = memTreatments[idx];
+    const nextDueAt = dto.nextDueAt || existing.nextDueAt;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const target = nextDueAt ? new Date(nextDueAt) : new Date();
+    target.setHours(0, 0, 0, 0);
+    const dueDays = Math.round((target.getTime() - now.getTime()) / 86400000);
+
+    const updated: TreatmentScheduleItem = {
+      ...existing,
+      name: dto.name !== undefined ? dto.name : existing.name,
+      dose: dto.dose !== undefined ? dto.dose : existing.dose,
+      every: dto.every !== undefined ? dto.every : existing.every,
+      due: dueDays,
+      nextDueAt,
+      lastGivenAt: dto.lastGivenAt !== undefined ? dto.lastGivenAt : existing.lastGivenAt,
+    };
+    memTreatments[idx] = updated;
+    return updated;
+  }
+
+  async deleteTreatmentSchedule(id: string): Promise<boolean> {
+    const supabase = getSupabaseClient(this.env);
+    if (supabase && isUuid(id)) {
+      try {
+        const { error } = await supabase.from('treatment_schedules').delete().eq('id', id);
+        if (!error) return true;
+      } catch (err) {
+        console.warn('Supabase deleteTreatmentSchedule error:', err);
+      }
+    }
+
+    const idx = memTreatments.findIndex((t) => t.id === id);
+    if (idx !== -1) {
+      memTreatments.splice(idx, 1);
+      return true;
+    }
+    return true;
   }
 }

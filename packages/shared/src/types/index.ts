@@ -301,9 +301,19 @@ export interface DailyFrequency {
   total: number;
 }
 
+export type PredictionReason =
+  | 'routine_peak'
+  | 'meal_boost'
+  | 'walk_boost'
+  | 'cadence_interval'
+  | 'overdue'
+  | 'cold_start';
+
 export interface NextPoopPrediction {
   hasData: boolean;
   predictedTimestamp: string | null;
+  windowStart?: string | null;
+  windowEnd?: string | null;
   timeDisplay: string;
   timeDisplayKo: string;
   subtext: string;
@@ -313,6 +323,7 @@ export interface NextPoopPrediction {
   isTomorrow: boolean;
   confidence: 'low' | 'medium' | 'high';
   estimatedHoursRemaining?: number;
+  predictionReason?: PredictionReason;
 }
 
 export interface PetAnalytics {
@@ -345,4 +356,15 @@ export interface GetEventsQuery {
   endDate?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface TreatmentScheduleItem {
+  id: string;
+  petId?: string;
+  name: string;
+  dose: string;
+  every: number; // recurrence interval in days: 7, 30, 90, 180, 365
+  due: number; // days until next dose (negative = overdue, 0 = today, 1 = tomorrow)
+  nextDueAt?: string; // ISO date string
+  lastGivenAt?: string;
 }

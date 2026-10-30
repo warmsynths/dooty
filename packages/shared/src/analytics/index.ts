@@ -5,23 +5,52 @@ import {
   DailyFrequency,
   EventType,
   NextPoopPrediction,
+  PredictionReason,
 } from '../types/index.js';
 import { ALL_EVENT_TYPES } from '../constants/index.js';
+
+// Helper for circular minute difference (0-1439 mins)
+function circDiffMinutes(m1: number, m2: number): number {
+  const diff = Math.abs(m1 - m2) % 1440;
+  return diff > 720 ? 1440 - diff : diff;
+}
+
+// Clock time formatting helpers
+function formatClockTime(d: Date): { en: string; ko: string; hmEn: string; hmKo: string } {
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const mStr = m === 0 ? ':00' : `:${m.toString().padStart(2, '0')}`;
+  const periodEn = h >= 12 ? 'pm' : 'am';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+
+  const en = `${h12}${mStr} ${periodEn}`;
+  const periodKo = h >= 12 ? '오후' : '오전';
+  const ko = `${periodKo} ${h12}${mStr}`;
+  const hmEn = `${h12}${mStr}`;
+  const hmKo = `${h12}${mStr}`;
+
+  return { en, ko, hmEn, hmKo };
+}
 
 export function predictNextPoop(
   events: PetEvent[],
   petId: string,
   now: Date = new Date()
 ): NextPoopPrediction {
-  const petPoops = events
-    .filter((e) => e.petId === petId && e.eventType === 'poop')
-    .map((e) => ({
-      ...e,
-      date: new Date(e.timestamp),
-    }))
+  const nowMs = now.getTime();
+
+  // 1. Separate and sort events for this pet
+  const petEvents = events
+    .filter((e) => e.petId === petId)
+    .map((e) => ({ ...e, date: new Date(e.timestamp) }))
     .filter((e) => !isNaN(e.date.getTime()))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
+  const petPoops = petEvents.filter((e) => e.eventType === 'poop');
+  const petFoods = petEvents.filter((e) => e.eventType === 'food');
+  const petWalks = petEvents.filter((e) => e.eventType === 'walk');
+
+  // Cold start: no data at all
   if (petPoops.length === 0) {
     return {
       hasData: false,
@@ -34,17 +63,17 @@ export function predictNextPoop(
       isOverdue: false,
       isTomorrow: false,
       confidence: 'low',
+      predictionReason: 'cold_start',
     };
   }
 
   const lastPoop = petPoops[petPoops.length - 1];
   const lastPoopTime = lastPoop.date;
-  const nowMs = now.getTime();
   const lastPoopMs = lastPoopTime.getTime();
-  const msSinceLast = Math.max(0, nowMs - lastPoopMs);
-  const hoursSinceLastPoop = msSinceLast / (1000 * 60 * 60);
+  const msSinceLastPoop = Math.max(0, nowMs - lastPoopMs);
+  const hoursSinceLastPoop = msSinceLastPoop / (1000 * 60 * 60);
 
-  // 1. Calculate active poop days and average daily frequency
+  // 2. Calculate unique poop days & daily frequency
   const poopDateSet = new Set<string>();
   for (const p of petPoops) {
     poopDateSet.add(p.date.toISOString().split('T')[0]);
@@ -52,212 +81,313 @@ export function predictNextPoop(
   const uniquePoopDays = Math.max(1, poopDateSet.size);
   const avgPoopsPerDay = petPoops.length / uniquePoopDays;
 
-  // Poops logged today
-  const todayMidnight = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    0,
-    0,
-    0,
-    0
-  );
-  const poopsToday = petPoops.filter((p) => p.date >= todayMidnight);
-  const poopsTodayCount = poopsToday.length;
-
-  // 2. Calculate historical inter-poop intervals on the same day (or <= 24h)
-  const sameDayGapsHours: number[] = [];
+  // 3. Historical inter-poop gaps and dynamic refractory window
+  const validGapsHours: number[] = [];
   for (let i = 1; i < petPoops.length; i++) {
-    const prev = petPoops[i - 1].date;
-    const curr = petPoops[i].date;
-    const gapH = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60);
-    if (gapH >= 0.33 && gapH <= 16) {
-      sameDayGapsHours.push(gapH);
+    const gapH = (petPoops[i].date.getTime() - petPoops[i - 1].date.getTime()) / (1000 * 60 * 60);
+    if (gapH >= 0.33 && gapH <= 36) {
+      validGapsHours.push(gapH);
     }
   }
 
-  let avgIntervalHours = 6.0;
-  if (sameDayGapsHours.length > 0) {
-    const sum = sameDayGapsHours.reduce((acc, v) => acc + v, 0);
-    avgIntervalHours = Math.max(2.5, Math.min(12, sum / sameDayGapsHours.length));
+  let typicalIntervalHours = 12.0;
+  let minRefractoryHours = 2.0;
+
+  if (validGapsHours.length > 0) {
+    const sortedGaps = [...validGapsHours].sort((a, b) => a - b);
+    typicalIntervalHours = sortedGaps[Math.floor(sortedGaps.length * 0.5)]; // median
+    const p10Gap = sortedGaps[Math.max(0, Math.floor(sortedGaps.length * 0.1))];
+    minRefractoryHours = Math.max(1.5, Math.min(3.5, p10Gap));
   } else if (avgPoopsPerDay <= 1.2) {
-    avgIntervalHours = 24.0;
+    typicalIntervalHours = 24.0;
+    minRefractoryHours = 2.5;
   } else {
-    avgIntervalHours = Math.max(4.0, 24.0 / avgPoopsPerDay);
+    typicalIntervalHours = Math.max(4.0, 24.0 / avgPoopsPerDay);
+    minRefractoryHours = Math.min(2.5, typicalIntervalHours * 0.25);
   }
 
-  // 3. Hourly distribution & routine clusters
-  const hourCounts = new Array(24).fill(0);
+  // 4. Circular Kernel Density Estimation (KDE) with Exponential Recency Weighting
+  // 96 discrete 15-minute bins across 24h (0 to 1425 minutes)
+  const kdeBins = new Array(96).fill(0);
+  const KERNEL_SIGMA_MINS = 45; // 45-minute smoothing bandwidth
+  const RECENCY_HALF_LIFE_DAYS = 21; // 3-week half life
+
   for (const p of petPoops) {
-    hourCounts[p.date.getHours()]++;
-  }
+    const daysAgo = Math.max(0, (nowMs - p.date.getTime()) / (1000 * 60 * 60 * 24));
+    const recencyWeight = Math.max(0.08, Math.exp((-Math.LN2 * daysAgo) / RECENCY_HALF_LIFE_DAYS));
+    const pMinute = p.date.getHours() * 60 + p.date.getMinutes();
 
-  const activeHours: { hour: number; count: number }[] = [];
-  for (let h = 0; h < 24; h++) {
-    if (hourCounts[h] > 0) {
-      activeHours.push({ hour: h, count: hourCounts[h] });
+    for (let b = 0; b < 96; b++) {
+      const binMinute = b * 15;
+      const diffM = circDiffMinutes(binMinute, pMinute);
+      const density = recencyWeight * Math.exp(-(diffM * diffM) / (2 * KERNEL_SIGMA_MINS * KERNEL_SIGMA_MINS));
+      kdeBins[b] += density;
     }
   }
 
-  const sortedByCount = [...activeHours].sort((a, b) => b.count - a.count);
-  const maxCount = sortedByCount[0]?.count || 0;
-  const significantHours = activeHours
-    .filter((ah) => ah.count >= Math.max(1, Math.ceil(maxCount * 0.2)))
-    .map((ah) => ah.hour)
-    .sort((a, b) => a - b);
+  // Peak detection across circular bins
+  const maxDensity = Math.max(...kdeBins, 0.001);
+  const detectedPeaks: { minuteOfDay: number; density: number }[] = [];
 
-  const routineHours = significantHours.length > 0 ? significantHours : [8];
+  for (let b = 0; b < 96; b++) {
+    const prev = kdeBins[(b - 1 + 96) % 96];
+    const curr = kdeBins[b];
+    const next = kdeBins[(b + 1) % 96];
 
-  // 4. Current context
-  const currentHourFraction = now.getHours() + now.getMinutes() / 60;
-  const minRestHours = Math.min(2.5, avgIntervalHours * 0.4);
+    if (curr > prev && curr >= next && curr >= maxDensity * 0.25) {
+      // Sub-bin quadratic refinement
+      const denom = 2 * (2 * curr - prev - next);
+      const offset = denom > 1e-6 ? (next - prev) / denom : 0;
+      const refinedMinute = Math.round((b + offset) * 15);
+      const normalizedMinute = ((refinedMinute % 1440) + 1440) % 1440;
+      detectedPeaks.push({ minuteOfDay: normalizedMinute, density: curr });
+    }
+  }
 
+  // Sort routine peaks chronologically across the day
+  detectedPeaks.sort((a, b) => a.minuteOfDay - b.minuteOfDay);
+
+  // Fallback if no peaks detected (e.g., 1 poop)
+  const routineMinutes: number[] =
+    detectedPeaks.length > 0
+      ? detectedPeaks.map((p) => p.minuteOfDay)
+      : petPoops.length > 0
+      ? [petPoops[petPoops.length - 1].date.getHours() * 60 + petPoops[petPoops.length - 1].date.getMinutes()]
+      : [8 * 60]; // default 8:00 AM
+
+  // 5. Learned event lags: Food -> Poop and Walk -> Poop
+  const foodLagsMins: number[] = [];
+  for (const poop of petPoops) {
+    const priorFoods = petFoods.filter(
+      (f) => f.date.getTime() < poop.date.getTime() && poop.date.getTime() - f.date.getTime() <= 3.5 * 3600000
+    );
+    if (priorFoods.length > 0) {
+      const closestFood = priorFoods[priorFoods.length - 1];
+      foodLagsMins.push((poop.date.getTime() - closestFood.date.getTime()) / 60000);
+    }
+  }
+  const learnedFoodLagMins =
+    foodLagsMins.length >= 2
+      ? Math.max(20, Math.min(75, Math.round(foodLagsMins.sort((a, b) => a - b)[Math.floor(foodLagsMins.length / 2)])))
+      : 35; // canine default: 35 minutes
+
+  const walkLagsMins: number[] = [];
+  for (const poop of petPoops) {
+    const priorWalks = petWalks.filter(
+      (w) => fDateWithin(w.date, poop.date, 0, 90)
+    );
+    if (priorWalks.length > 0) {
+      const closestWalk = priorWalks[priorWalks.length - 1];
+      walkLagsMins.push((poop.date.getTime() - closestWalk.date.getTime()) / 60000);
+    }
+  }
+  function fDateWithin(d1: Date, d2: Date, minM: number, maxM: number) {
+    const diff = (d2.getTime() - d1.getTime()) / 60000;
+    return diff >= minM && diff <= maxM;
+  }
+  const learnedWalkLagMins =
+    walkLagsMins.length >= 2
+      ? Math.max(10, Math.min(45, Math.round(walkLagsMins.sort((a, b) => a - b)[Math.floor(walkLagsMins.length / 2)])))
+      : 15; // canine default: 15 minutes into walk
+
+  // 6. Active recent event triggers (events occurring AFTER the last poop)
+  const recentFoodsAfterPoop = petFoods.filter((f) => f.date.getTime() > lastPoopMs);
+  const latestFoodAfterPoop = recentFoodsAfterPoop[recentFoodsAfterPoop.length - 1];
+
+  const recentWalksAfterPoop = petWalks.filter((w) => w.date.getTime() > lastPoopMs);
+  const latestWalkAfterPoop = recentWalksAfterPoop[recentWalksAfterPoop.length - 1];
+
+  // Refractory threshold
+  const minEarliestMs = lastPoopMs + minRefractoryHours * 3600000;
+
+  // 7. Multi-Factor Candidate Selection
   let predictedDate: Date;
-  let predictionType: 'routine_today' | 'routine_tomorrow' | 'interval_today' | 'overdue' = 'routine_today';
-  let isTomorrow = false;
+  let predictionReason: PredictionReason = 'routine_peak';
   let isOverdue = false;
+  let isTomorrow = false;
+  let rolledOver = false;
 
-  // Future routine hours today
-  const futureRoutineHoursToday = routineHours.filter((h) => {
-    const candidateDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      h,
-      0,
-      0,
-      0
-    );
-    const hoursFromNow = (candidateDate.getTime() - nowMs) / (1000 * 60 * 60);
-    const hoursFromLastPoop = (candidateDate.getTime() - lastPoopMs) / (1000 * 60 * 60);
-    return hoursFromNow > 0.1 && hoursFromLastPoop >= minRestHours;
-  });
-
-  // Check if overdue
-  const isOverdueCheck =
-    (avgPoopsPerDay > 1.2 && hoursSinceLastPoop > avgIntervalHours * 1.35 && currentHourFraction >= 7 && currentHourFraction <= 22) ||
-    (avgPoopsPerDay <= 1.2 && poopsTodayCount === 0 && currentHourFraction >= 14 && hoursSinceLastPoop >= 20);
-
-  if (isOverdueCheck) {
-    isOverdue = true;
-    predictionType = 'overdue';
-    if (
-      futureRoutineHoursToday.length > 0 &&
-      futureRoutineHoursToday[0] - currentHourFraction <= 2.0
-    ) {
-      predictedDate = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        futureRoutineHoursToday[0],
-        0,
-        0,
-        0
-      );
-    } else {
-      // Estimate soon (within next 30 mins)
-      const soon = new Date(nowMs + 30 * 60 * 1000);
-      const roundedMins = Math.round(soon.getMinutes() / 15) * 15;
-      soon.setMinutes(roundedMins, 0, 0);
-      predictedDate = soon;
+  // Check event boost: Walk underway or recently logged
+  let walkCandidate: Date | null = null;
+  if (latestWalkAfterPoop) {
+    const minsSinceWalk = (nowMs - latestWalkAfterPoop.date.getTime()) / 60000;
+    if (minsSinceWalk <= 90) {
+      const candidate = new Date(latestWalkAfterPoop.date.getTime() + learnedWalkLagMins * 60000);
+      if (candidate.getTime() >= minEarliestMs - 15 * 60000) {
+        walkCandidate = candidate;
+      }
     }
-  } else if (futureRoutineHoursToday.length > 0 && (poopsTodayCount < Math.ceil(avgPoopsPerDay) || poopsTodayCount === 0)) {
-    // Upcoming routine slot today
-    const targetHour = futureRoutineHoursToday[0];
-    predictedDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      targetHour,
-      0,
-      0,
-      0
-    );
-    predictionType = 'routine_today';
-  } else if (
-    poopsTodayCount < Math.ceil(avgPoopsPerDay) &&
-    avgPoopsPerDay > 1.2 &&
-    lastPoopMs + avgIntervalHours * 3600000 > nowMs &&
-    new Date(lastPoopMs + avgIntervalHours * 3600000).getDate() === now.getDate() &&
-    new Date(lastPoopMs + avgIntervalHours * 3600000).getHours() <= 21
-  ) {
-    // Interval candidate today
-    const intervalCandidate = new Date(lastPoopMs + avgIntervalHours * 3600000);
-    const roundedMins = Math.round(intervalCandidate.getMinutes() / 15) * 15;
-    intervalCandidate.setMinutes(roundedMins, 0, 0);
-    predictedDate = intervalCandidate;
-    predictionType = 'interval_today';
+  }
+
+  // Check event boost: Meal eaten recently
+  let mealCandidate: Date | null = null;
+  if (latestFoodAfterPoop) {
+    const minsSinceMeal = (nowMs - latestFoodAfterPoop.date.getTime()) / 60000;
+    if (minsSinceMeal <= 210) {
+      const candidate = new Date(latestFoodAfterPoop.date.getTime() + learnedFoodLagMins * 60000);
+      if (candidate.getTime() >= minEarliestMs - 15 * 60000) {
+        mealCandidate = candidate;
+      }
+    }
+  }
+
+  // Evaluate candidate selection
+  if (walkCandidate && (walkCandidate.getTime() > nowMs - 45 * 60000)) {
+    predictedDate = walkCandidate;
+    predictionReason = 'walk_boost';
+    if (nowMs > predictedDate.getTime() + 20 * 60000) {
+      isOverdue = true;
+    }
+  } else if (mealCandidate && (mealCandidate.getTime() > nowMs - 60 * 60000)) {
+    predictedDate = mealCandidate;
+    predictionReason = 'meal_boost';
+    if (nowMs > predictedDate.getTime() + 30 * 60000) {
+      isOverdue = true;
+    }
   } else {
-    // Tomorrow morning routine
-    isTomorrow = true;
-    predictionType = 'routine_tomorrow';
-    const firstRoutineHour = routineHours[0] ?? 8;
-    predictedDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 1,
-      firstRoutineHour,
-      0,
-      0,
-      0
+    // Routine circadian evaluation
+    // Build peak date candidates for today & tomorrow
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const tomorrowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+
+    const todayCandidates = routineMinutes.map((m) => new Date(todayMidnight.getTime() + m * 60000));
+    const tomorrowCandidates = routineMinutes.map((m) => new Date(tomorrowMidnight.getTime() + m * 60000));
+
+    // Check overdue on today's peaks
+    // An overdue peak is one where candidate is within the last 2.5 hours and after refractory
+    const overdueCandidate = todayCandidates.find(
+      (c) => c.getTime() <= nowMs && nowMs - c.getTime() <= 2.5 * 3600000 && c.getTime() >= minEarliestMs - 30 * 60000
     );
+
+    // Future candidate today
+    const futureTodayCandidate = todayCandidates.find(
+      (c) => c.getTime() > nowMs && c.getTime() >= minEarliestMs
+    );
+
+    // Overdue check based on inter-poop interval
+    const isIntervalOverdue =
+      (avgPoopsPerDay > 1.2 && hoursSinceLastPoop > typicalIntervalHours * 1.35 && now.getHours() >= 7 && now.getHours() <= 22) ||
+      (avgPoopsPerDay <= 1.2 && hoursSinceLastPoop >= 20 && now.getHours() >= 14);
+
+    if (overdueCandidate) {
+      predictedDate = overdueCandidate;
+      isOverdue = true;
+      predictionReason = 'overdue';
+    } else if (futureTodayCandidate) {
+      predictedDate = futureTodayCandidate;
+      predictionReason = 'routine_peak';
+      // Check if earlier peak passed today and we rolled over to this one
+      const earlierPassed = todayCandidates.some((c) => c.getTime() < nowMs && nowMs - c.getTime() > 2.5 * 3600000);
+      if (earlierPassed) {
+        rolledOver = true;
+      }
+    } else if (isIntervalOverdue) {
+      isOverdue = true;
+      predictionReason = 'overdue';
+      // If next routine peak is soon (within 2h), snap to it; otherwise estimate within next 20m
+      if (tomorrowCandidates[0] && (tomorrowCandidates[0].getTime() - nowMs) <= 2.0 * 3600000) {
+        predictedDate = tomorrowCandidates[0];
+      } else {
+        const soon = new Date(nowMs + 20 * 60000);
+        soon.setMinutes(Math.round(soon.getMinutes() / 15) * 15, 0, 0);
+        predictedDate = soon;
+      }
+    } else {
+      // Tomorrow morning routine
+      isTomorrow = true;
+      predictedDate = tomorrowCandidates[0];
+      predictionReason = 'routine_peak';
+      const earlierPassed = todayCandidates.some((c) => c.getTime() < nowMs);
+      if (earlierPassed) {
+        rolledOver = true;
+      }
+    }
   }
 
-  // 4. Progress percentage
-  let progressPercent = 50;
-  const totalDuration = predictedDate.getTime() - lastPoopMs;
-  if (totalDuration > 0) {
-    const elapsed = nowMs - lastPoopMs;
-    progressPercent = Math.round((elapsed / totalDuration) * 100);
-    progressPercent = Math.max(5, Math.min(100, progressPercent));
+  // 8. Confidence level & Window Calculation
+  let confidence: 'low' | 'medium' | 'high' = 'low';
+  let windowMarginMins = 30;
+
+  if (petPoops.length >= 10) {
+    confidence = 'high';
+    windowMarginMins = 15;
+  } else if (petPoops.length >= 3) {
+    confidence = 'medium';
+    windowMarginMins = 25;
+  } else {
+    confidence = 'low';
+    windowMarginMins = 45;
   }
+
+  if (predictionReason === 'walk_boost' || predictionReason === 'meal_boost') {
+    windowMarginMins = 15;
+  }
+
+  const windowStart = new Date(predictedDate.getTime() - windowMarginMins * 60000);
+  const windowEnd = new Date(predictedDate.getTime() + windowMarginMins * 60000);
+
+  // 9. Formatting: Target time & tight window
+  const targetFmt = formatClockTime(predictedDate);
+  const startFmt = formatClockTime(windowStart);
+  const endFmt = formatClockTime(windowEnd);
+
+  // Window string e.g. "5:00–5:30"
+  const windowStrEn = `${startFmt.hmEn}–${endFmt.en}`;
+  const windowStrKo = `${startFmt.hmKo}–${endFmt.hmKo}`;
+
+  let timeDisplay = isTomorrow
+    ? `Tomorrow ~${targetFmt.en} (${windowStrEn})`
+    : `~${targetFmt.en} (${windowStrEn})`;
+
+  let timeDisplayKo = isTomorrow
+    ? `내일 ~${targetFmt.ko} (${windowStrKo})`
+    : `~${targetFmt.ko} (${windowStrKo})`;
+
   if (isOverdue) {
-    progressPercent = 95;
+    timeDisplay = `Due now (~${targetFmt.en})`;
+    timeDisplayKo = `곧 배변 예상 (~${targetFmt.ko})`;
   }
 
-  // 5. Formatting
-  const formatTime = (d: Date) => {
-    const h = d.getHours();
-    const m = d.getMinutes();
-    const mStr = m === 0 ? ':00' : `:${m.toString().padStart(2, '0')}`;
-    const periodEn = h >= 12 ? 'pm' : 'am';
-    const h12 = h % 12 === 0 ? 12 : h % 12;
-
-    const timeEn = `${h12}${mStr} ${periodEn}`;
-    const periodKo = h >= 12 ? '오후' : '오전';
-    const timeKo = `${periodKo} ${h12}${mStr}`;
-
-    return { timeEn, timeKo };
-  };
-
-  const formatted = formatTime(predictedDate);
-  const timeDisplay = isTomorrow ? `Tomorrow ${formatted.timeEn}` : formatted.timeEn;
-  const timeDisplayKo = isTomorrow ? `내일 ${formatted.timeKo}` : formatted.timeKo;
-
-  let subtext = 'Calculated from historical routine.';
-  let subtextKo = '기록 데이터 기반 다음 예상 시간대입니다.';
+  // Contextual bilingual subtexts
+  let subtext = 'Regular routine peak window.';
+  let subtextKo = '규칙적인 일과 시간대입니다.';
 
   if (isOverdue) {
-    subtext = `Due anytime · ~${hoursSinceLastPoop.toFixed(1)}h since last poop`;
-    subtextKo = `배변 주기(${avgIntervalHours.toFixed(1)}시간) 경과 · 곧 예상`;
+    subtext = `Due anytime · ~${hoursSinceLastPoop.toFixed(1)}h since last poop.`;
+    subtextKo = `배변 주기 경과 · 마지막 배변 후 ~${hoursSinceLastPoop.toFixed(1)}시간 경과.`;
+  } else if (predictionReason === 'walk_boost') {
+    subtext = 'Walk activity boost · High probability during or after walk.';
+    subtextKo = '산책 활동 반영 · 산책 중 또는 직후 배변 확률 높음.';
+  } else if (predictionReason === 'meal_boost' && latestFoodAfterPoop) {
+    const mealFmt = formatClockTime(latestFoodAfterPoop.date);
+    subtext = `Expected ~${learnedFoodLagMins}m after ${mealFmt.en} meal.`;
+    subtextKo = `${mealFmt.ko} 식사 후 약 ${learnedFoodLagMins}분 내 예상.`;
+  } else if (rolledOver) {
+    subtext = isTomorrow
+      ? 'Earlier routine windows passed · Next window tomorrow morning.'
+      : `Earlier routine window elapsed · Next expected ~${targetFmt.en}.`;
+    subtextKo = isTomorrow
+      ? '오늘 루틴 시간 경과 · 내일 아침 예상 시간대입니다.'
+      : `이전 루틴 시간 경과 · 다음 예상 시간대 ~${targetFmt.ko}.`;
   } else if (isTomorrow) {
     subtext = 'Next routine window tomorrow morning.';
     subtextKo = '내일 아침 루틴 예상 시간대입니다.';
-  } else if (predictionType === 'interval_today') {
-    const lastFormatted = formatTime(lastPoopTime);
-    subtext = `~${avgIntervalHours.toFixed(1)}h interval after ${lastFormatted.timeEn} poop.`;
-    subtextKo = `마지막 기록(${lastFormatted.timeKo}) 기준 약 ${avgIntervalHours.toFixed(1)}시간 후.`;
-  } else if (predictionType === 'routine_today') {
-    subtext = 'Calculated from historical routine.';
-    subtextKo = '기록 데이터 기반 다음 루틴 예상입니다.';
+  } else if (petPoops.length >= 3) {
+    subtext = `Routine peak based on ${petPoops.length} recorded events.`;
+    subtextKo = `기록 데이터 ${petPoops.length}개 기반 루틴 분석.`;
   }
 
-  // Confidence calculation
-  let confidence: 'low' | 'medium' | 'high' = 'low';
-  if (petPoops.length >= 10) {
-    confidence = 'high';
-  } else if (petPoops.length >= 3) {
-    confidence = 'medium';
+  // 10. Progress percentage
+  let progressPercent = 50;
+  if (isOverdue) {
+    progressPercent = 95;
+  } else {
+    const totalDuration = predictedDate.getTime() - lastPoopMs;
+    if (totalDuration > 0) {
+      const elapsed = nowMs - lastPoopMs;
+      progressPercent = Math.round((elapsed / totalDuration) * 100);
+      progressPercent = Math.max(5, Math.min(95, progressPercent));
+    }
   }
 
   const hoursRemaining = Math.max(0, (predictedDate.getTime() - nowMs) / (1000 * 60 * 60));
@@ -265,6 +395,8 @@ export function predictNextPoop(
   return {
     hasData: true,
     predictedTimestamp: predictedDate.toISOString(),
+    windowStart: windowStart.toISOString(),
+    windowEnd: windowEnd.toISOString(),
     timeDisplay,
     timeDisplayKo,
     subtext,
@@ -274,6 +406,7 @@ export function predictNextPoop(
     isTomorrow,
     confidence,
     estimatedHoursRemaining: Math.round(hoursRemaining * 10) / 10,
+    predictionReason,
   };
 }
 

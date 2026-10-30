@@ -24,6 +24,7 @@ import './dooty-photo-modal.js';
 import './dooty-pet-switcher.js';
 import './dooty-walk.js';
 import './dooty-auth.js';
+import './dooty-treatments-drawer.js';
 let DootyApp = class DootyApp extends LitElement {
     constructor() {
         super(...arguments);
@@ -349,6 +350,9 @@ let DootyApp = class DootyApp extends LitElement {
 
         <!-- Photo & Avatar Customization Modal -->
         <dooty-photo-modal></dooty-photo-modal>
+
+        <!-- Treatments & Medicine Repeating Schedule Drawer -->
+        <dooty-treatments-drawer></dooty-treatments-drawer>
       </div>
     `;
     }
