@@ -1,13 +1,21 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
-export default defineConfig({
-  base: './',
-  build: {
-    outDir: path.resolve(__dirname, '../../docs'),
-    emptyOutDir: true,
-  },
+export default defineConfig(({ mode }) => {
+  const rootEnv = loadEnv(mode, path.resolve(__dirname, '../../'), '');
+  const webEnv = loadEnv(mode, __dirname, '');
+  const cartoApiKey = webEnv.VITE_CARTO_API_KEY || rootEnv.VITE_CARTO_API_KEY || process.env.VITE_CARTO_API_KEY || '';
+
+  return {
+    base: './',
+    define: {
+      'import.meta.env.VITE_CARTO_API_KEY': JSON.stringify(cartoApiKey),
+    },
+    build: {
+      outDir: path.resolve(__dirname, '../../docs'),
+      emptyOutDir: true,
+    },
   resolve: {
     alias: {
       '@dooty/shared': path.resolve(__dirname, '../shared/src/index.ts'),
@@ -77,4 +85,6 @@ export default defineConfig({
       },
     }),
   ],
+};
 });
+

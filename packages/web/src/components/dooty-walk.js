@@ -8,6 +8,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import L from 'leaflet';
 import { appState } from '../state/appState.js';
+import { createCartoTileLayer } from '../utils/map-tiles.js';
 let DootyWalk = class DootyWalk extends LitElement {
     constructor() {
         super(...arguments);
@@ -629,10 +630,7 @@ let DootyWalk = class DootyWalk extends LitElement {
                 zoomControl: false,
                 attributionControl: false,
             }).setView([currentLat, currentLng], 17);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                subdomains: 'abcd',
-            }).addTo(this.liveMap);
+            createCartoTileLayer().addTo(this.liveMap);
             // Start Shadow & Main Polylines
             this.livePolylineShadow = L.polyline(route, {
                 color: '#17140F',
@@ -788,10 +786,7 @@ let DootyWalk = class DootyWalk extends LitElement {
                 touchZoom: true,
                 scrollWheelZoom: false,
             }).setView(defaultCenter, 15);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                subdomains: 'abcd',
-            }).addTo(this.summaryMap);
+            createCartoTileLayer().addTo(this.summaryMap);
             if (route.length >= 2) {
                 // Shadow line
                 L.polyline(route, {

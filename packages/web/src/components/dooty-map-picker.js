@@ -8,6 +8,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import L from 'leaflet';
 import { appState } from '../state/appState.js';
+import { createCartoTileLayer } from '../utils/map-tiles.js';
 let DootyMapPicker = class DootyMapPicker extends LitElement {
     constructor() {
         super(...arguments);
@@ -395,9 +396,7 @@ let DootyMapPicker = class DootyMapPicker extends LitElement {
             attributionControl: false,
         }).setView([defaultLat, defaultLng], zoomLevel);
         // Warm CartoDB Voyager tiles matching the neo-brutalist cream palette
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd',
+        createCartoTileLayer({
             updateWhenIdle: true,
             updateWhenZooming: false,
             keepBuffer: 3,

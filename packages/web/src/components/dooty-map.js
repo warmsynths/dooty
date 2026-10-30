@@ -9,6 +9,7 @@ import { customElement, state } from 'lit/decorators.js';
 import L from 'leaflet';
 import { appState } from '../state/appState.js';
 import { formatLocalizedEventNotes } from '@dooty/shared';
+import { createCartoTileLayer } from '../utils/map-tiles.js';
 // Helper to compute convex hull for pet territory boundary
 function getConvexHull(points) {
     if (points.length <= 2)
@@ -521,10 +522,7 @@ let DootyMap = class DootyMap extends LitElement {
             attributionControl: false,
         }).setView(initialCenter, initialZoom);
         // Warm CartoDB Voyager tile layer
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd',
-        }).addTo(this.map);
+        createCartoTileLayer().addTo(this.map);
         // Zoom controls on bottom right
         L.control.zoom({ position: 'bottomright' }).addTo(this.map);
         // Initialize layer groups for vector elements
