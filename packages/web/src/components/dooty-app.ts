@@ -109,8 +109,8 @@ export class DootyApp extends LitElement {
     }
 
     .toast-title {
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 17px;
       color: #17140F;
       letter-spacing: -0.3px;

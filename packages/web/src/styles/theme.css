@@ -25,12 +25,19 @@
 
   --font-heading: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
   --font-body: 'Nunito', system-ui, -apple-system, sans-serif;
+  /* Small-size display text (<18px): same as --font-heading in English.
+     In Korean, Black Han Sans' heavy counters collapse at small sizes, so
+     this resolves to Noto Sans KR 900 instead — see .lang-ko override. */
+  --font-heading-sm: var(--font-heading);
+  --font-weight-heading-sm: 800;
 }
 
 body.lang-ko,
 html[lang="ko"] body {
   --font-heading: 'Black Han Sans', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
   --font-body: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  --font-heading-sm: var(--font-body);
+  --font-weight-heading-sm: 900;
   word-break: keep-all;
   -webkit-font-smoothing: antialiased;
 }

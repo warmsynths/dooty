@@ -190,31 +190,22 @@ export interface MoodOption {
 }
 
 export const MOOD_OPTIONS: MoodOption[] = [
-  { id: 'Zoomy', name: 'Zoomy', nameKo: '우다다' },
-  { id: 'Regal', name: 'Regal', nameKo: '도도함' },
-  { id: 'Guilty', name: 'Guilty', nameKo: '눈치봄' },
-  { id: 'Unbothered', name: 'Unbothered', nameKo: '무덤덤' },
-  { id: 'Feral', name: 'Feral', nameKo: '천방지축' },
-  { id: 'Happy', name: 'Happy', nameKo: '행복함' },
-  { id: 'Calm', name: 'Calm', nameKo: '차분함' },
+  { id: 'Normal', name: 'Normal', nameKo: '평소대로' },
+  { id: 'Energetic', name: 'Energetic', nameKo: '활발함' },
+  { id: 'Tired', name: 'Tired', nameKo: '피곤함' },
+  { id: 'Uncomfortable', name: 'Uncomfortable', nameKo: '불편해 보임' },
 ];
 
 export const MOOD_MAP_KO: Record<string, string> = {
-  Zoomy: '우다다',
-  Regal: '도도함',
-  Guilty: '눈치봄',
-  Unbothered: '무덤덤',
-  Feral: '천방지축',
-  Happy: '행복함',
-  Calm: '차분함',
+  Normal: '평소대로',
+  Energetic: '활발함',
+  Tired: '피곤함',
+  Uncomfortable: '불편해 보임',
 };
 
 export const MOOD_MAP_EN: Record<string, string> = {
-  우다다: 'Zoomy',
-  도도함: 'Regal',
-  눈치봄: 'Guilty',
-  무덤덤: 'Unbothered',
-  천방지축: 'Feral',
-  행복함: 'Happy',
-  차분함: 'Calm',
+  평소대로: 'Normal',
+  활발함: 'Energetic',
+  피곤함: 'Tired',
+  '불편해 보임': 'Uncomfortable',
 };
