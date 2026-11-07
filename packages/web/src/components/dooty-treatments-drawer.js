@@ -157,8 +157,8 @@ let DootyTreatmentsDrawer = class DootyTreatmentsDrawer extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 14px;
       color: #17140F;
     }
@@ -193,8 +193,8 @@ let DootyTreatmentsDrawer = class DootyTreatmentsDrawer extends LitElement {
     }
 
     .card-left-time {
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 15px;
       line-height: 1;
       letter-spacing: -0.4px;
@@ -327,8 +327,8 @@ let DootyTreatmentsDrawer = class DootyTreatmentsDrawer extends LitElement {
       border-radius: 20px;
       padding: 15px;
       text-align: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 16px;
       color: #17140F;
       cursor: pointer;
