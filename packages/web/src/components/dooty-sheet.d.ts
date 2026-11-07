@@ -52,8 +52,17 @@ export declare class DootySheet extends LitElement {
     private symptomOptions;
     private portionOptions;
     private moodOptions;
+    private quickTypes;
     private handleSelectType;
     private handleBackToTypes;
+    /** Tapping a quick type logs it right away with current defaults + GPS,
+     *  no confirm screen — tap the feed entry afterward to edit it. */
+    private quickLogType;
+    /** Best-effort, silent GPS fill for the quick-log path: reuses any
+     *  coordinates already on the component, otherwise tries a short fix
+     *  (3s) so the common case stays near-instant without blocking forever
+     *  if permission is denied or the device is slow to acquire a fix. */
+    private quickFetchLocation;
     private triggerPhotoUpload;
     private locationPresets;
     private locationPresetsKo;

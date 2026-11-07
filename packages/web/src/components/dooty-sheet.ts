@@ -9,7 +9,7 @@ export class DootySheet extends LitElement {
   @state() private selectedType: string | null = null;
   @state() private cons: number = 4;
   @state() private size: 'S' | 'M' | 'L' | 'XL' = 'M';
-  @state() private mood: string = 'Zoomy';
+  @state() private mood: string = 'Normal';
   @state() private selectedMed: string = 'Apoquel';
   @state() private selectedMedDose: string = '16 mg with food';
   @state() private customMedName: string = '';
@@ -1391,7 +1391,17 @@ export class DootySheet extends LitElement {
 
   private moodOptions = MOOD_OPTIONS;
 
+  // poop/pee/vomit/medicine save instantly on tap with whatever defaults are
+  // already set (same as the design's `QUICK` map / `pickType` → `quickLog`);
+  // everything else still opens the full form. Editing an existing entry
+  // always opens the full form regardless of type.
+  private quickTypes: EventType[] = ['poop', 'pee', 'vomit', 'medicine'];
+
   private handleSelectType(typeId: string) {
+    if (!appState.editingEvent && this.quickTypes.includes(typeId as EventType)) {
+      this.quickLogType(typeId as EventType);
+      return;
+    }
     this.selectedType = typeId;
     appState.loggerEventType = typeId as EventType;
   }
@@ -1399,6 +1409,54 @@ export class DootySheet extends LitElement {
   private handleBackToTypes() {
     this.selectedType = null;
     appState.loggerEventType = null;
+  }
+
+  /** Tapping a quick type logs it right away with current defaults + GPS,
+   *  no confirm screen — tap the feed entry afterward to edit it. */
+  private async quickLogType(typeId: EventType) {
+    if (this.isSaving) return;
+    this.selectedType = typeId;
+    appState.loggerEventType = typeId;
+    await this.quickFetchLocation();
+    await this.handleSave();
+  }
+
+  /** Best-effort, silent GPS fill for the quick-log path: reuses any
+   *  coordinates already on the component, otherwise tries a short fix
+   *  (3s) so the common case stays near-instant without blocking forever
+   *  if permission is denied or the device is slow to acquire a fix. */
+  private quickFetchLocation(): Promise<void> {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return Promise.resolve();
+    if (this.lat !== undefined && this.lng !== undefined) return Promise.resolve();
+
+    return new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      const timer = setTimeout(finish, 3000);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          clearTimeout(timer);
+          this.lat = pos.coords.latitude;
+          this.lng = pos.coords.longitude;
+          if (!this.locationName) {
+            this.locationName = `${this.lat.toFixed(4)}, ${this.lng.toFixed(4)}`;
+            // Fire-and-forget: refines locationName after the fact if it
+            // resolves before the user's next log; harmless if it doesn't.
+            this.tryReverseGeocode(this.lat, this.lng);
+          }
+          finish();
+        },
+        () => {
+          clearTimeout(timer);
+          finish();
+        },
+        { enableHighAccuracy: true, timeout: 3000 }
+      );
+    });
   }
 
   private triggerPhotoUpload() {
