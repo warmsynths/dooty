@@ -55,8 +55,23 @@ export declare class DootySheet extends LitElement {
     private quickTypes;
     private handleSelectType;
     private handleBackToTypes;
+    /** Re-entrancy guard for quickLogType, separate from `isSaving` (which
+     *  handleSave only sets *after* the GPS fetch below resolves) — without
+     *  this, a second tap during that window would start a second concurrent
+     *  quick-log racing the same `lat`/`lng`/`notes`/`photoUrl` fields. */
+    private quickLogging;
     /** Tapping a quick type logs it right away with current defaults + GPS,
-     *  no confirm screen — tap the feed entry afterward to edit it. */
+     *  no confirm screen — tap the feed entry afterward to edit it. Closes
+     *  the sheet immediately (matching the design's instant-close `xitGo`)
+     *  rather than leaving it open: `selectedType` being set would otherwise
+     *  render the full edit form for the second or so the GPS fetch and save
+     *  take, which looks like the app opened a form and auto-submitted it.
+     *
+     *  `appState.closeLogger()` fires this component's own `appState.subscribe`
+     *  listener synchronously, which resets `this.selectedType` back to null
+     *  as soon as the sheet closes — so `typeId` is passed straight through
+     *  to `handleSave` as an explicit override instead of being read back off
+     *  `this.selectedType` after the close. */
     private quickLogType;
     /** Best-effort, silent GPS fill for the quick-log path: reuses any
      *  coordinates already on the component, otherwise tries a short fix

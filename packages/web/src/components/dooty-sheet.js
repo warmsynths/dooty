@@ -120,6 +120,11 @@ let DootySheet = class DootySheet extends LitElement {
         // everything else still opens the full form. Editing an existing entry
         // always opens the full form regardless of type.
         this.quickTypes = ['poop', 'pee', 'vomit', 'medicine'];
+        /** Re-entrancy guard for quickLogType, separate from `isSaving` (which
+         *  handleSave only sets *after* the GPS fetch below resolves) — without
+         *  this, a second tap during that window would start a second concurrent
+         *  quick-log racing the same `lat`/`lng`/`notes`/`photoUrl` fields. */
+        this.quickLogging = false;
         this.locationPresets = [
             'Home / Indoor',
             'Backyard',
@@ -1424,14 +1429,29 @@ let DootySheet = class DootySheet extends LitElement {
         appState.loggerEventType = null;
     }
     /** Tapping a quick type logs it right away with current defaults + GPS,
-     *  no confirm screen — tap the feed entry afterward to edit it. */
+     *  no confirm screen — tap the feed entry afterward to edit it. Closes
+     *  the sheet immediately (matching the design's instant-close `xitGo`)
+     *  rather than leaving it open: `selectedType` being set would otherwise
+     *  render the full edit form for the second or so the GPS fetch and save
+     *  take, which looks like the app opened a form and auto-submitted it.
+     *
+     *  `appState.closeLogger()` fires this component's own `appState.subscribe`
+     *  listener synchronously, which resets `this.selectedType` back to null
+     *  as soon as the sheet closes — so `typeId` is passed straight through
+     *  to `handleSave` as an explicit override instead of being read back off
+     *  `this.selectedType` after the close. */
     async quickLogType(typeId) {
-        if (this.isSaving)
+        if (this.quickLogging || this.isSaving)
             return;
-        this.selectedType = typeId;
-        appState.loggerEventType = typeId;
-        await this.quickFetchLocation();
-        await this.handleSave();
+        this.quickLogging = true;
+        appState.closeLogger();
+        try {
+            await this.quickFetchLocation();
+            await this.handleSave(typeId);
+        }
+        finally {
+            this.quickLogging = false;
+        }
     }
     /** Best-effort, silent GPS fill for the quick-log path: reuses any
      *  coordinates already on the component, otherwise tries a short fix
@@ -1731,9 +1751,9 @@ let DootySheet = class DootySheet extends LitElement {
         this.customTimestamp = new Date().toISOString();
         this.requestUpdate();
     }
-    async handleSave() {
+    async handleSave(overrideType) {
         const isKo = appState.currentLocale === 'ko';
-        const type = (this.selectedType || 'poop');
+        const type = overrideType || (this.selectedType || 'poop');
         const petName = appState.currentPet?.name || (isKo ? '반려견' : 'Pet');
         let summaryNotes = '';
         let toastTitle = isKo ? '기록 완료!' : 'Logged it!';
