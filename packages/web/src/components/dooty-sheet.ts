@@ -1432,9 +1432,46 @@ export class DootySheet extends LitElement {
   private async quickLogType(typeId: EventType) {
     if (this.quickLogging || this.isSaving) return;
     this.quickLogging = true;
+    const isKo = appState.currentLocale === 'ko';
+    const petName = appState.currentPet?.name || (isKo ? '반려견' : 'Pet');
+    const workTitle = {
+      poop: isKo ? '응가 기록 중…' : 'Logging poop…',
+      pee: isKo ? '소변 기록 중…' : 'Logging pee…',
+      vomit: isKo ? '구토 기록 중…' : 'Logging vomit…',
+      medicine: isKo
+        ? `${this.customMedName || this.selectedMed} 기록 중…`
+        : `Logging ${this.customMedName || this.selectedMed}…`,
+    }[typeId as 'poop' | 'pee' | 'vomit' | 'medicine'];
     appState.closeLogger();
+    // Matches the design's quickLog()/work(): a progress toast steps through
+    // finding GPS then saving, instead of the tap looking like it did nothing
+    // for the second or so those two awaits take.
+    this.dispatchEvent(
+      new CustomEvent('dooty-toast', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          title: workTitle,
+          sub: isKo ? '위치 찾는 중…' : 'Finding your location…',
+          kind: 'work',
+          prog: '30%',
+        },
+      })
+    );
     try {
       await this.quickFetchLocation();
+      this.dispatchEvent(
+        new CustomEvent('dooty-toast', {
+          bubbles: true,
+          composed: true,
+          detail: {
+            title: workTitle,
+            sub: isKo ? `${petName}의 기록에 저장 중…` : `Saving to ${petName}'s log…`,
+            kind: 'work',
+            prog: '78%',
+          },
+        })
+      );
       await this.handleSave(typeId);
     } finally {
       this.quickLogging = false;
