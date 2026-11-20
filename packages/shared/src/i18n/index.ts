@@ -942,13 +942,10 @@ export function formatLocalizedEventNotes(
   if (isKo) {
     let result = notes;
     // Mood translations
-    result = result.replace(/\bZoomy\b/g, '우다다');
-    result = result.replace(/\bRegal\b/g, '도도함');
-    result = result.replace(/\bGuilty\b/g, '눈치봄');
-    result = result.replace(/\bUnbothered\b/g, '무덤덤');
-    result = result.replace(/\bFeral\b/g, '천방지축');
-    result = result.replace(/\bHappy\b/g, '행복함');
-    result = result.replace(/\bCalm\b/g, '차분함');
+    result = result.replace(/\bNormal\b/g, '평소대로');
+    result = result.replace(/\bEnergetic\b/g, '활발함');
+    result = result.replace(/\bTired\b/g, '피곤함');
+    result = result.replace(/\bUncomfortable\b/g, '불편해 보임');
 
     // Type / category prefixes
     result = result.replace(/^Type\s+(\d+)/, '응가 $1단계');
@@ -999,13 +996,10 @@ export function formatLocalizedEventNotes(
   } else {
     let result = notes;
     // Translate from Korean to English if needed
-    result = result.replace(/우다다/g, 'Zoomy');
-    result = result.replace(/도도함/g, 'Regal');
-    result = result.replace(/눈치봄/g, 'Guilty');
-    result = result.replace(/무덤덤/g, 'Unbothered');
-    result = result.replace(/천방지축/g, 'Feral');
-    result = result.replace(/행복함/g, 'Happy');
-    result = result.replace(/차분함/g, 'Calm');
+    result = result.replace(/평소대로/g, 'Normal');
+    result = result.replace(/활발함/g, 'Energetic');
+    result = result.replace(/피곤함/g, 'Tired');
+    result = result.replace(/불편해 보임/g, 'Uncomfortable');
 
     result = result.replace(/^응가\s+(\d+)단계/, 'Type $1');
     result = result.replace(/^쉬야\b/, 'Pee');

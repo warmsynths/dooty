@@ -9,7 +9,7 @@ export class DootySheet extends LitElement {
   @state() private selectedType: string | null = null;
   @state() private cons: number = 4;
   @state() private size: 'S' | 'M' | 'L' | 'XL' = 'M';
-  @state() private mood: string = 'Zoomy';
+  @state() private mood: string = 'Normal';
   @state() private selectedMed: string = 'Apoquel';
   @state() private selectedMedDose: string = '16 mg with food';
   @state() private customMedName: string = '';
@@ -1391,7 +1391,17 @@ export class DootySheet extends LitElement {
 
   private moodOptions = MOOD_OPTIONS;
 
+  // poop/pee/vomit/medicine save instantly on tap with whatever defaults are
+  // already set (same as the design's `QUICK` map / `pickType` → `quickLog`);
+  // everything else still opens the full form. Editing an existing entry
+  // always opens the full form regardless of type.
+  private quickTypes: EventType[] = ['poop', 'pee', 'vomit', 'medicine'];
+
   private handleSelectType(typeId: string) {
+    if (!appState.editingEvent && this.quickTypes.includes(typeId as EventType)) {
+      this.quickLogType(typeId as EventType);
+      return;
+    }
     this.selectedType = typeId;
     appState.loggerEventType = typeId as EventType;
   }
@@ -1399,6 +1409,111 @@ export class DootySheet extends LitElement {
   private handleBackToTypes() {
     this.selectedType = null;
     appState.loggerEventType = null;
+  }
+
+  /** Re-entrancy guard for quickLogType, separate from `isSaving` (which
+   *  handleSave only sets *after* the GPS fetch below resolves) — without
+   *  this, a second tap during that window would start a second concurrent
+   *  quick-log racing the same `lat`/`lng`/`notes`/`photoUrl` fields. */
+  private quickLogging = false;
+
+  /** Tapping a quick type logs it right away with current defaults + GPS,
+   *  no confirm screen — tap the feed entry afterward to edit it. Closes
+   *  the sheet immediately (matching the design's instant-close `xitGo`)
+   *  rather than leaving it open: `selectedType` being set would otherwise
+   *  render the full edit form for the second or so the GPS fetch and save
+   *  take, which looks like the app opened a form and auto-submitted it.
+   *
+   *  `appState.closeLogger()` fires this component's own `appState.subscribe`
+   *  listener synchronously, which resets `this.selectedType` back to null
+   *  as soon as the sheet closes — so `typeId` is passed straight through
+   *  to `handleSave` as an explicit override instead of being read back off
+   *  `this.selectedType` after the close. */
+  private async quickLogType(typeId: EventType) {
+    if (this.quickLogging || this.isSaving) return;
+    this.quickLogging = true;
+    const isKo = appState.currentLocale === 'ko';
+    const petName = appState.currentPet?.name || (isKo ? '반려견' : 'Pet');
+    const workTitle = {
+      poop: isKo ? '응가 기록 중…' : 'Logging poop…',
+      pee: isKo ? '소변 기록 중…' : 'Logging pee…',
+      vomit: isKo ? '구토 기록 중…' : 'Logging vomit…',
+      medicine: isKo
+        ? `${this.customMedName || this.selectedMed} 기록 중…`
+        : `Logging ${this.customMedName || this.selectedMed}…`,
+    }[typeId as 'poop' | 'pee' | 'vomit' | 'medicine'];
+    appState.closeLogger();
+    // Matches the design's quickLog()/work(): a progress toast steps through
+    // finding GPS then saving, instead of the tap looking like it did nothing
+    // for the second or so those two awaits take.
+    this.dispatchEvent(
+      new CustomEvent('dooty-toast', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          title: workTitle,
+          sub: isKo ? '위치 찾는 중…' : 'Finding your location…',
+          kind: 'work',
+          prog: '30%',
+        },
+      })
+    );
+    try {
+      await this.quickFetchLocation();
+      this.dispatchEvent(
+        new CustomEvent('dooty-toast', {
+          bubbles: true,
+          composed: true,
+          detail: {
+            title: workTitle,
+            sub: isKo ? `${petName}의 기록에 저장 중…` : `Saving to ${petName}'s log…`,
+            kind: 'work',
+            prog: '78%',
+          },
+        })
+      );
+      await this.handleSave(typeId);
+    } finally {
+      this.quickLogging = false;
+    }
+  }
+
+  /** Best-effort, silent GPS fill for the quick-log path: reuses any
+   *  coordinates already on the component, otherwise tries a short fix
+   *  (3s) so the common case stays near-instant without blocking forever
+   *  if permission is denied or the device is slow to acquire a fix. */
+  private quickFetchLocation(): Promise<void> {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return Promise.resolve();
+    if (this.lat !== undefined && this.lng !== undefined) return Promise.resolve();
+
+    return new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      const timer = setTimeout(finish, 3000);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          clearTimeout(timer);
+          this.lat = pos.coords.latitude;
+          this.lng = pos.coords.longitude;
+          if (!this.locationName) {
+            this.locationName = `${this.lat.toFixed(4)}, ${this.lng.toFixed(4)}`;
+            // Fire-and-forget: refines locationName after the fact if it
+            // resolves before the user's next log; harmless if it doesn't.
+            this.tryReverseGeocode(this.lat, this.lng);
+          }
+          finish();
+        },
+        () => {
+          clearTimeout(timer);
+          finish();
+        },
+        { enableHighAccuracy: true, timeout: 3000 }
+      );
+    });
   }
 
   private triggerPhotoUpload() {
@@ -1717,9 +1832,9 @@ export class DootySheet extends LitElement {
     this.requestUpdate();
   }
 
-  private async handleSave() {
+  private async handleSave(overrideType?: EventType) {
     const isKo = appState.currentLocale === 'ko';
-    const type = (this.selectedType || 'poop') as EventType;
+    const type = overrideType || ((this.selectedType || 'poop') as EventType);
     const petName = appState.currentPet?.name || (isKo ? '반려견' : 'Pet');
 
     let summaryNotes = '';

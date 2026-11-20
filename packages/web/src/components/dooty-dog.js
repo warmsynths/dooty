@@ -78,8 +78,8 @@ let DootyDog = class DootyDog extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 11px;
       color: #17140F;
     }
@@ -96,8 +96,8 @@ let DootyDog = class DootyDog extends LitElement {
       cursor: pointer;
       box-shadow: 3px 3px 0 #17140F;
       flex: none;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 16px;
       color: #17140F;
       user-select: none;
@@ -308,8 +308,8 @@ let DootyDog = class DootyDog extends LitElement {
       border-radius: 20px;
       padding: 15px;
       text-align: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 17px;
       color: #FFF;
       cursor: pointer;

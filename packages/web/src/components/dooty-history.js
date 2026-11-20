@@ -94,8 +94,8 @@ let DootyHistory = class DootyHistory extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 12px;
       color: #17140F;
     }
@@ -132,8 +132,8 @@ let DootyHistory = class DootyHistory extends LitElement {
       cursor: pointer;
       box-shadow: 3px 3px 0 #17140F;
       flex: none;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 16px;
       color: #17140F;
       transition: transform 0.13s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.13s cubic-bezier(0.23, 1, 0.32, 1);
@@ -554,8 +554,8 @@ let DootyHistory = class DootyHistory extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 14px;
       color: #17140F;
     }

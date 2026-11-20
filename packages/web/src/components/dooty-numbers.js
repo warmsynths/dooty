@@ -302,8 +302,8 @@ let DootyNumbers = class DootyNumbers extends LitElement {
     }
 
     .trophy-val {
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 17px;
       color: #17140F;
       line-height: 1;

@@ -166,8 +166,8 @@ export class DootyImporter extends LitElement {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 15px;
       padding: 14px 18px;
       border: 3px solid #17140F;
@@ -205,8 +205,8 @@ export class DootyImporter extends LitElement {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 13px;
       padding: 8px 18px;
       border: 2.5px solid #17140F;
@@ -339,7 +339,7 @@ export class DootyImporter extends LitElement {
         @drop=${(e: DragEvent) => this.handleDrop(e)}
       >
         <div style="font-size: 42px;">📂</div>
-        <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px;">
+        <div style="font-family: var(--font-heading-sm); font-weight: var(--font-weight-heading-sm); font-size: 16px;">
           ${t.dropText}
         </div>
         <input

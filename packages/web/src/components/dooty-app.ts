@@ -23,7 +23,7 @@ import './dooty-treatments-drawer.js';
 @customElement('dooty-app')
 export class DootyApp extends LitElement {
   @state() private activeView: string = 'today';
-  @state() private toast: { title: string; sub: string } | null = null;
+  @state() private toast: { title: string; sub: string; kind?: 'work' | 'ok' | 'err'; prog?: string } | null = null;
   @state() private burstCount: number = 0;
   private toastTimer?: any;
   private unsubscribe?: () => void;
@@ -89,6 +89,28 @@ export class DootyApp extends LitElement {
       display: flex;
       align-items: center;
       gap: 12px;
+      overflow: hidden;
+      transition: background-color 0.22s ease;
+    }
+
+    .toast-spinner {
+      width: 36px;
+      height: 36px;
+      flex: none;
+      border-radius: 50%;
+      border: 3.5px solid #E8DFCB;
+      border-top-color: #17140F;
+      box-sizing: border-box;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .toast-progress {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 4px;
+      background: #17140F;
+      transition: width 0.8s cubic-bezier(0.23, 1, 0.32, 1);
     }
 
     .toast-icon {
@@ -109,8 +131,8 @@ export class DootyApp extends LitElement {
     }
 
     .toast-title {
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 17px;
       color: #17140F;
       letter-spacing: -0.3px;
@@ -220,7 +242,7 @@ export class DootyApp extends LitElement {
     });
 
     this.addEventListener('dooty-toast', (e: any) => {
-      this.showToast(e.detail.title, e.detail.sub);
+      this.showToast(e.detail.title, e.detail.sub, e.detail.kind, e.detail.prog);
     });
 
     appState.init();
@@ -232,11 +254,15 @@ export class DootyApp extends LitElement {
     if (this.toastTimer) clearTimeout(this.toastTimer);
   }
 
-  private showToast(title: string, sub: string) {
+  private showToast(title: string, sub: string, kind: 'work' | 'ok' | 'err' = 'ok', prog?: string) {
     if (this.toastTimer) clearTimeout(this.toastTimer);
-    this.toast = { title, sub };
-    this.burstCount++;
+    this.toast = { title, sub, kind, prog };
     this.requestUpdate();
+    // A 'work' toast is a progress step (e.g. "Finding your location...")
+    // and stays up until the caller replaces or clears it — no confetti,
+    // no auto-dismiss, since the operation it describes isn't done yet.
+    if (kind === 'work') return;
+    if (kind === 'ok') this.burstCount++;
     this.toastTimer = setTimeout(() => {
       this.toast = null;
       this.requestUpdate();
@@ -302,22 +328,45 @@ export class DootyApp extends LitElement {
         <!-- Toast Notification (Pinned over dock) -->
         ${this.toast
           ? html`
-              <div class="toast-pill">
-                <div class="toast-icon">
-                  <div style="width:7px; height:4px; border-radius:50%; background:#17140F;"></div>
-                  <div style="width:11px; height:5px; border-radius:50%; background:#17140F;"></div>
-                  <div style="width:15px; height:6px; border-radius:50%; background:#17140F;"></div>
-                </div>
+              <div
+                class="toast-pill"
+                style="${this.toast.kind === 'work'
+                  ? 'background:#FFFBF2;'
+                  : this.toast.kind === 'err'
+                  ? 'background:#FF5A3C;'
+                  : ''}"
+              >
+                ${this.toast.kind === 'work'
+                  ? html`<div class="toast-spinner"></div>`
+                  : html`
+                      <div class="toast-icon">
+                        <div style="width:7px; height:4px; border-radius:50%; background:#17140F;"></div>
+                        <div style="width:11px; height:5px; border-radius:50%; background:#17140F;"></div>
+                        <div style="width:15px; height:6px; border-radius:50%; background:#17140F;"></div>
+                      </div>
+                    `}
                 <div style="flex: 1; min-width: 0;">
                   <div class="toast-title">${this.toast.title}</div>
-                  <div class="toast-sub">${this.toast.sub}</div>
+                  <div
+                    class="toast-sub"
+                    style="${this.toast.kind === 'work'
+                      ? 'color:#6A6152;'
+                      : this.toast.kind === 'err'
+                      ? 'color:#3B0E05;'
+                      : ''}"
+                  >
+                    ${this.toast.sub}
+                  </div>
                 </div>
+                ${this.toast.kind === 'work' && this.toast.prog
+                  ? html`<div class="toast-progress" style="width: ${this.toast.prog};"></div>`
+                  : null}
               </div>
             `
           : null}
 
         <!-- Confetti Burst Layer -->
-        ${this.burstCount > 0 && this.toast
+        ${this.burstCount > 0 && this.toast && this.toast.kind !== 'work'
           ? html`
               <div class="burst-layer">
                 ${Array.from({ length: 26 }, (_, i) => {

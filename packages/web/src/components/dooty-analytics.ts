@@ -49,8 +49,8 @@ export class DootyAnalytics extends LitElement {
     }
 
     .card-title {
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 16px;
       display: flex;
       align-items: center;

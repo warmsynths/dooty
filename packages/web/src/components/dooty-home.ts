@@ -120,8 +120,8 @@ export class DootyHome extends LitElement {
       cursor: pointer;
       box-shadow: 3px 3px 0 #17140F;
       flex: none;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 16px;
       color: #17140F;
       user-select: none;
@@ -278,8 +278,8 @@ export class DootyHome extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 12px;
       color: #17140F;
     }
@@ -330,8 +330,8 @@ export class DootyHome extends LitElement {
     }
 
     .treatment-pill-arrow {
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 17px;
       flex: none;
       line-height: 1;
@@ -431,8 +431,8 @@ export class DootyHome extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 16px;
       color: #17140F;
     }
@@ -815,7 +815,7 @@ export class DootyHome extends LitElement {
             `
           : html`
               <div class="empty-card">
-                <div style="font-family: var(--font-heading); font-weight: 800; font-size: 16px; color: #17140F;">
+                <div style="font-family: var(--font-heading-sm); font-weight: var(--font-weight-heading-sm); font-size: 16px; color: #17140F;">
                   ${isKo ? '아직 기록이 없습니다' : 'No logs recorded yet'}
                 </div>
                 <div style="font-size: 12px; line-height: 1.45;">

@@ -158,8 +158,8 @@ export class DootyPetSwitcher extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-heading);
-      font-weight: 800;
+      font-family: var(--font-heading-sm);
+      font-weight: var(--font-weight-heading-sm);
       font-size: 17px;
       color: #17140F;
     }
@@ -355,7 +355,7 @@ export class DootyPetSwitcher extends LitElement {
               <div class="sheet-title">${isKo ? '누구의 하루인가요?' : 'Whose day is it?'}</div>
               <div class="sheet-sub">
                 ${isKo
-                  ? '이름을 누르면 전환됩니다. PAGE를 누르면 프로필로 이동합니다.'
+                  ? '이름을 누르면 전환됩니다. 프로필을 누르면 상세 정보로 이동합니다.'
                   : 'Tap a name to follow them. Tap PAGE for their file.'}
               </div>
             </div>
